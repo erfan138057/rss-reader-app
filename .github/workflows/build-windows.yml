@@ -1,4 +1,3 @@
-
 name: Build Windows Executable
 
 on: [push, workflow_dispatch]
@@ -8,7 +7,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4 # به v4 به‌روز شد
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -20,10 +19,11 @@ jobs:
     - name: Build with PyInstaller
       run: |
         # برای PyInstaller باید فایل‌های اصلی رو بهش داد
-        # در این حالت، gui.py و core.py و config.py
+        # در این حالت، gui.py
+        # core.py و config.py به صورت خودکار توسط gui.py ایمپورت می‌شوند
         pyinstaller --onefile --windowed --name rss_reader gui.py
     - name: Upload artifact
-          - uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4 # به v4 به‌روز شد
       with:
         name: rss-reader-windows-exe
         path: dist/rss_reader.exe
