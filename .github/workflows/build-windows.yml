@@ -23,7 +23,7 @@ jobs:
         # در این حالت، gui.py و core.py و config.py
         pyinstaller --onefile --windowed --name rss_reader gui.py
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+          - uses: actions/upload-artifact@v4
       with:
         name: rss-reader-windows-exe
         path: dist/rss_reader.exe
