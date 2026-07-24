@@ -7,7 +7,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4 # به v4 به‌روز شد
+    - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -18,12 +18,10 @@ jobs:
         pip install -r requirements.txt
     - name: Build with PyInstaller
       run: |
-        # برای PyInstaller باید فایل‌های اصلی رو بهش داد
-        # در این حالت، gui.py
-        # core.py و config.py به صورت خودکار توسط gui.py ایمپورت می‌شوند
-        pyinstaller --onefile --windowed --name rss_reader gui.py
+        # PyInstaller را با استفاده از ماژول پایتون اجرا می‌کنیم تا مسیر آن به درستی پیدا شود.
+        python -m PyInstaller --onefile --windowed --name rss_reader gui.py
     - name: Upload artifact
-      uses: actions/upload-artifact@v4 # به v4 به‌روز شد
+      uses: actions/upload-artifact@v4
       with:
         name: rss-reader-windows-exe
         path: dist/rss_reader.exe
