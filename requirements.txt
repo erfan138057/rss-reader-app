@@ -1,6 +1,6 @@
-# RSS Reader - نیازمندی‌ها (همه رایگان و اوپن‌سورس)
+# RSS Reader - نیازمندی‌ها
 httpx>=0.27
 feedparser>=6.0
+Pillow>=10.0       # برای نمایش تصویر
 pyinstaller>=6.0
-# توجه: Tkinter روی ویندوز داخل خودِ پایتون نصب می‌شه - نیاز به pip نداره
-# روی لینوکس اگه Tkinter نبود: sudo apt install python3-tk
+# tkinter داخل پایتون ویندوز هست - نیاز به pip نداره
