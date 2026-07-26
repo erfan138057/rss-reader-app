@@ -1,117 +1,84 @@
-# RSS Reader Application
+🎙️ RSS Reader Pro - Professional RSS Management Desktop App
 
-یک برنامه RSS Reader کامل با پشتیبانی از:
-- DNS-over-HTTPS (DoH) برای عبور از فیلترینگ
-- پخش ویدیو (YouTube, Vimeo, Redgifs, ویدیوهای مستقیم)
-- نمایش تصاویر
-- رابط کاربری دو سبک: تلگرام و ردیت
-- کش کردن برای عملکرد بهتر
+A comprehensive Python desktop application for managing RSS feeds with advanced privacy and video features.
 
-## ویژگی‌ها
+!Python (https://img.shields.io/badge/Python-3.8%2B-blue)
+!License (https://img.shields.io/badge/License-MIT-green) 
+!Platform (https://img.shields.io/badge/Platform-Windows%2C%20Linux%2C%20Mac-lightgrey)
 
-### 🔍 DNS Scanner
-- اسکن سرورهای DNS مختلف
-- تشخیص سرورهای فیلتر شده
-- پشتیبانی از DoH
+✨ Key Features
 
-### 🎥 پخش ویدیو
-- پشتیبانی از YouTube, Vimeo, Redgifs
-- کنترل صدا و پخش
-- پخش با VLC (کیفیت بالا)
+- ⚡️ DNS-over-HTTPS Support - Bypass internet filters with secure connections
+- 🎬 Redgifs Video Playback - Native support for Redgifs videos
+- 🎧 Audio Control - Volume controls in VLC player (+/- buttons)
+- 🌟 Dual UI Themes - Reddit-style and Telegram-style interfaces
+- ⚡️ Smart Caching - Fast performance with intelligent caching
+- 🛡️ Privacy First - No data sent to external servers, local SQLite storage
+- 📺 YouTube Support - Direct YouTube video detection and playback
+- 🔍 Content Detection - Automatic detection of videos and images in feeds
 
-### 🖼️ نمایش محتوا
-- دو سبک: Telegram-style و Reddit-style
-- کارت‌های واکنش‌گرا
-- نمایش تصاویر و ویدیوها
+🚀 Quick Start
 
-### ⚡ عملکرد
-- کش کردن فیدها برای کاهش درخواست‌ها
-- خطاگیری پیشرفته
-- وابستگی‌های بررسی شده
+Prerequisites
+- Python 3.8+
+- VLC Media Player (for video playback)
 
-## نصب
+Installation
+# Clone the repository
+git clone https://github.com/erfan138057/rss-reader-app.git
+cd rss-reader-app
 
-### وابستگی‌ها
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### نیازمندی‌های اختیاری
-- **VLC**: برای پخش ویدیو (نصب از [vlc.org](https://www.vlc.org))
-- **FFmpeg**: برای تحلیل ویدیو (فقط برای توسعه)
-
-## اجرا
-
-```bash
+# Run the application
 python gui.py
-```
 
-## تنظیمات
 
-در منوی Settings می‌توانید:
-- سبک نمایش را تغییر دهید (Telegram یا Reddit)
-- سرورهای DNS را تنظیم کنید
-- تنظیمات کش را تغییر دهید
+🎯 Perfect For
 
-## تست
+- Iranian Users - Bypass filters with DNS-over-HTTPS
+- Privacy Enthusiasts - 100% local operation
+- Video Consumers - Redgifs + YouTube support
+- Python Developers - Clean, modular codebase
+- RSS Power Users - Advanced feed management
 
-برای اجرای تست‌ها:
-```bash
-python test_core.py
-```
+🛡️ Privacy Features
 
-## ساختار کد
+- All data stored locally in SQLite
+- DNS-over-HTTPS encrypts DNS queries
+- No telemetry or external data collection
+- Complete offline functionality
 
-- `core.py`: موتور اصلی - DNS, DoH, fetch, cache
-- `gui.py`: رابط کاربری - نمایش، پخش ویدیو
-- `config.py`: تنظیمات پیش‌فرض
-- `i18n.py`: ترجمه‌ها
+🛠️ Built With
 
-## توسعه
+- Python 3.8+ - Core language
+- Tkinter - GUI framework  
+- VLC - Video playback via python-vlc
+- SQLite - Local data storage
+- Requests - HTTP client with DoH support
 
-### اضافه کردن پشتیبانی از پلتفرم ویدیوی جدید
+🤝 Contributing
 
-1. الگوی regex را در `core.py` اضافه کنید:
-```python
-NEWPLATFORM_RE = re.compile(r'(?:https?://)?(?:www\.)?newplatform\.com/([A-Za-z0-9_-]+)')
-```
+We love contributions! Here's how you can help:
 
-2. تابع تشخیص را به `_detect_video_from_link` اضافه کنید
+1. Report Bugs - Open an issue with detailed description
+2. Suggest Features - Share your ideas in Discussions
+3. Submit Code - Send pull requests for improvements
+4. Improve Docs - Help us make documentation better
 
-3. نوع ویدیو را به توابع دیگر اضافه کنید
+📊 Project Stats
 
-### اضافه کردن کش سفارشی
+!GitHub stars (https://img.shields.io/github/stars/erfan138057/rss-reader-app?style=social)
+!Git forks (https://img.shields.io/github/forks/erfan138057/rss-reader-app?style=social)
+!GitHub issues (https://img.shields.io/github/issues/erfan138057/rss-reader-app)
 
-کش فعلی از دیکشنری ساده استفاده می‌کند. برای سیستم کش پیشرفته‌تر:
+📜 License
 
-```python
-# استفاده از redis یا database برای کش پایدار
-import redis
-redis_cache = redis.Redis()
-```
+MIT License - see LICENSE file for details.
 
-## عیب‌یابی
+---
 
-### پخش ویدیو کار نمی‌کند
-1. مطمئن شوید VLC نصب شده است
-2. کتابخانه python-vlc را نصب کنید: `pip install python-vlc`
+⭐️ If you find this project useful, please give it a star on GitHub! ⭐️
 
-### DNS کار نمی‌کند
-1. سرورهای DNS را در تنظیمات بررسی کنید
-2. اتصال اینترنت را بررسی کنید
-
-### تصاویر نمایش داده نمی‌شوند
-1. مطمئن شوید Pillow نصب شده است
-2. دسترسی اینترنت را بررسی کنید
-
-## مجوز
-
-MIT License - استفاده آزاد برای پروژه‌های شخصی و تجاری
-
-## مشارکت
-
-1. Fork کنید
-2. Feature branch ایجاد کنید
-3. Commit کنید
-4. Push کنید
-5. Pull Request ایجاد کنید
+همین الآن این رو در GitHub جایگزین کنید و انتشار رو شروع کنید! 🚀
