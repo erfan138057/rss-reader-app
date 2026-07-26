@@ -122,10 +122,12 @@ class VideoWindow(tk.Toplevel):
         tk.Label(hdr, text=title[:80], font=F["btn"],
                   fg=C["text_primary"], bg=C["sidebar"]).pack(side="left", padx=14)
 
-        if self._type == "direct" and VLC_OK:
+        if self._type in ["direct", "redgifs"] and VLC_OK:
             self._build_vlc()
         elif self._type == "youtube":
             self._build_youtube()
+        elif self._type == "redgifs":
+            self._build_redgifs()
         else:
             self._build_fallback()
 
@@ -138,6 +140,8 @@ class VideoWindow(tk.Toplevel):
             self._player = instance.media_player_new()
             media = instance.media_new(self._url)
             self._player.set_media(media)
+            # Enable audio
+            self._player.audio_set_volume(100)  # Set volume to 100%
             # embed into tk frame
             self.update()
             if hasattr(self._player, "set_hwnd"):
@@ -156,6 +160,13 @@ class VideoWindow(tk.Toplevel):
               fg=C["text_primary"]).pack(side="left", padx=8)
         _btn(ctrl, "⏹ Stop", self._stop, bg=C["input_bg"],
               fg=C["text_primary"]).pack(side="left", padx=4)
+        # Volume controls
+        tk.Label(ctrl, text="🔈", font=F["meta"], bg=C["sidebar"],
+                  fg=C["text_secondary"]).pack(side="left", padx=(12,4))
+        _btn(ctrl, "−", lambda: self._volume(-10), bg=C["input_bg"],
+              fg=C["text_primary"], padx=6, pady=2).pack(side="left", padx=2)
+        _btn(ctrl, "＋", lambda: self._volume(10), bg=C["input_bg"],
+              fg=C["text_primary"], padx=6, pady=2).pack(side="left", padx=2)
         _btn(ctrl, "🔗 Browser", lambda: webbrowser.open(self._url),
               bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=8)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -174,6 +185,22 @@ class VideoWindow(tk.Toplevel):
         _btn(inner, "🔗 Open in browser", lambda: webbrowser.open(self._url)
               ).pack(pady=12)
 
+    def _build_redgifs(self):
+        # Redgifs can be played directly via VLC, but we'll add a fallback UI
+        inner = tk.Frame(self, bg=C["bg"])
+        inner.pack(fill="both", expand=True)
+        tk.Label(inner, text="🎬", font=("Segoe UI", 48),
+                  fg=C["accent"], bg=C["bg"]).pack(pady=40)
+        tk.Label(inner, text="Redgifs video", font=F["large"],
+                  fg=C["text_primary"], bg=C["bg"]).pack()
+        tk.Label(inner, text=self._url, font=F["meta"],
+                  fg=C["text_secondary"], bg=C["bg"]).pack(pady=8)
+        _btn(inner, "🔗 Open in browser", lambda: webbrowser.open(self._url)
+              ).pack(pady=12)
+        # Try to play with VLC anyway
+        if VLC_OK:
+            self.after(500, lambda: self._build_vlc() if self.winfo_exists() else None)
+
     def _build_fallback(self):
         tk.Label(self, text=t("video_no_vlc"), font=F["body"],
                   fg=C["warning"], bg=C["bg"]).pack(pady=20)
@@ -187,6 +214,12 @@ class VideoWindow(tk.Toplevel):
 
     def _stop(self):
         if self._player: self._player.stop()
+
+    def _volume(self, delta):
+        if self._player:
+            current = self._player.audio_get_volume()
+            new_vol = max(0, min(100, current + delta))
+            self._player.audio_set_volume(new_vol)
 
     def _on_close(self):
         if self._player: self._player.stop()

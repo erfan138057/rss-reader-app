@@ -2,5 +2,6 @@
 httpx>=0.27
 feedparser>=6.0
 Pillow>=10.0       # برای نمایش تصویر
+python-vlc>=3.0    # برای پخش ویدیو با صدا
 pyinstaller>=6.0
 # tkinter داخل پایتون ویندوز هست - نیاز به pip نداره

@@ -61,18 +61,31 @@ def _is_ip(h):
     try: socket.inet_aton(h); return True
     except: return False
 
-def doh_resolve(host, doh_ip, doh_host, timeout=5, verify=True):
-    if _is_ip(host): return host
+def doh_resolve(host, doh_ip, doh_host, timeout=3, verify=True):
+    """Resolve host using DNS-over-HTTPS with proper error handling."""
+    if _is_ip(host):
+        return host
+    
     try:
-        r = httpx.get(f"https://{doh_ip}/dns-query",
-                       params={"name": host, "type": "A"},
-                       headers={"accept": "application/dns-json", "host": doh_host},
+        url = f"https://{doh_ip}/dns-query"
+        r = httpx.get(url, params={"name": host, "type": "A"},
+                       headers={"Accept": "application/dns-json", "Host": doh_host},
                        timeout=timeout, verify=verify)
-        for ans in r.json().get("Answer", []):
-            if ans.get("type") == 1: return ans["data"]
+        
+        if r.status_code == 200:
+            for ans in r.json().get("Answer", []):
+                if ans.get("type") == 1:
+                    return ans["data"]
+        
+        # Fallback to non-verified request if first attempt failed
+        if verify:
+            return doh_resolve(host, doh_ip, doh_host, timeout, verify=False)
+            
     except Exception as e:
-        if verify: return doh_resolve(host, doh_ip, doh_host, timeout, verify=False)
-        LOG.debug(f"DoH fail {host}@{doh_ip}: {e}")
+        LOG.debug(f"DoH resolution failed for {host}@{doh_ip}: {e}")
+        if verify:
+            return doh_resolve(host, doh_ip, doh_host, timeout, verify=False)
+    
     return None
 
 _doh_lock = threading.Lock()
@@ -319,50 +332,78 @@ class Store:
             return [{"url": r[0], "title": r[1], "pinned": bool(r[2])} for r in cur.fetchall()]
 
 # ---------------------------------------------------------------------------
+# Video detection helpers
+# ---------------------------------------------------------------------------
+def _detect_video_from_enclosures(entry):
+    """Check video enclosures."""
+    for enc in getattr(entry, "enclosures", []):
+        url = enc.get("href") or enc.get("url", "")
+        if enc.get("type","").startswith("video/") or VIDEO_EXT.search(url):
+            return url, "direct"
+    return "", ""
+
+def _detect_video_from_media_content(entry):
+    """Check media:content entries."""
+    for m in getattr(entry, "media_content", []):
+        url = m.get("url","")
+        if m.get("medium") == "video" or VIDEO_EXT.search(url):
+            return url, "direct"
+    return "", ""
+
+def _detect_video_from_link(link):
+    """Check direct link patterns."""
+    yt = YOUTUBE_RE.search(link)
+    if yt: return f"https://www.youtube.com/watch?v={yt.group(1)}", "youtube"
+    vm = VIMEO_RE.search(link)
+    if vm: return f"https://vimeo.com/{vm.group(1)}", "vimeo"
+    rg = REDGIFS_RE.search(link)
+    if rg: return f"https://redgifs.com/watch/{rg.group(1)}", "redgifs"
+    if VIDEO_EXT.search(link): return link, "direct"
+    return "", ""
+
+def _detect_video_from_text(text):
+    """Check text content for video URLs."""
+    for pat, vtype in [(YOUTUBE_RE,"youtube"),(VIMEO_RE,"vimeo"),(REDGIFS_RE,"redgifs")]:
+        m = pat.search(text)
+        if m:
+            base = "https://www.youtube.com/watch?v=" if vtype=="youtube" else "https://vimeo.com/"
+            id_  = m.group(1)
+            return f"{base}{id_}", vtype
+    ext = VIDEO_EXT.search(text)
+    if ext:
+        url_m = re.search(r'https?://\S+' + ext.group(1), text, re.I)
+        if url_m: return url_m.group(0), "direct"
+    return "", ""
+
+# ---------------------------------------------------------------------------
 # Video detection
 # ---------------------------------------------------------------------------
 YOUTUBE_RE = re.compile(
     r'(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})')
 VIMEO_RE   = re.compile(r'(?:https?://)?(?:www\.)?vimeo\.com/(\d+)')
+REDGIFS_RE = re.compile(r'(?:https?://)?(?:www\.)?redgifs\.com/watch/([A-Za-z0-9]+)')
 VIDEO_EXT  = re.compile(r'\.(mp4|webm|mkv|avi|mov|m3u8)(\?|$)', re.I)
 
 def detect_video(entry) -> tuple:
     """Returns (video_url, video_type) or ('', '')."""
-    # enclosures
-    for enc in getattr(entry, "enclosures", []):
-        url = enc.get("href") or enc.get("url", "")
-        if enc.get("type","").startswith("video/") or VIDEO_EXT.search(url):
-            return url, "direct"
-
-    # media:content
-    for m in getattr(entry, "media_content", []):
-        url = m.get("url","")
-        if m.get("medium") == "video" or VIDEO_EXT.search(url):
-            return url, "direct"
-
-    # link
+    # Check in order of priority
+    url, vtype = _detect_video_from_enclosures(entry)
+    if url: return url, vtype
+    
+    url, vtype = _detect_video_from_media_content(entry)
+    if url: return url, vtype
+    
     link = getattr(entry, "link", "") or ""
-    yt = YOUTUBE_RE.search(link)
-    if yt: return f"https://www.youtube.com/watch?v={yt.group(1)}", "youtube"
-    vm = VIMEO_RE.search(link)
-    if vm: return f"https://vimeo.com/{vm.group(1)}", "vimeo"
-    if VIDEO_EXT.search(link): return link, "direct"
-
-    # summary / content
+    url, vtype = _detect_video_from_link(link)
+    if url: return url, vtype
+    
+    # Check text content
     for field in ["summary", "content"]:
         val = getattr(entry, field, None)
         text = " ".join(v.get("value","") for v in val) if isinstance(val, list) else (val or "")
-        for pat, vtype in [(YOUTUBE_RE,"youtube"),(VIMEO_RE,"vimeo")]:
-            m = pat.search(text)
-            if m:
-                base = "https://www.youtube.com/watch?v=" if vtype=="youtube" else "https://vimeo.com/"
-                id_  = m.group(1)
-                return f"{base}{id_}", vtype
-        ext = VIDEO_EXT.search(text)
-        if ext:
-            url_m = re.search(r'https?://\S+' + ext.group(1), text, re.I)
-            if url_m: return url_m.group(0), "direct"
-
+        url, vtype = _detect_video_from_text(text)
+        if url: return url, vtype
+    
     return "", ""
 
 # ---------------------------------------------------------------------------
@@ -396,7 +437,8 @@ def fetch_og_image(page_url, timeout=8) -> str:
         ]:
             m = re.search(pat, head, re.I)
             if m: return m.group(1)
-    except: pass
+    except Exception as e:
+        LOG.debug(f"OG image fetch failed {page_url}: {e}")
     return ""
 
 def fetch_image_bytes(url, timeout=10) -> bytes:
@@ -405,13 +447,29 @@ def fetch_image_bytes(url, timeout=10) -> bytes:
                        headers={"User-Agent":"Mozilla/5.0"}, follow_redirects=True)
         if r.status_code == 200 and "image" in r.headers.get("content-type",""):
             return r.content
-    except: pass
+    except Exception as e:
+        LOG.debug(f"Image fetch failed {url}: {e}")
     return b""
 
 # ---------------------------------------------------------------------------
-# Feed fetch
+# Caching for better performance
+# ---------------------------------------------------------------------------
+_feed_cache = {}
+_CACHE_TIMEOUT = 300  # 5 minutes
+
+# ---------------------------------------------------------------------------
+# Feed fetch with caching
 # ---------------------------------------------------------------------------
 def fetch_feed(feed_url, timeout=20) -> list:
+    """Fetch RSS feed with caching support."""
+    # Check cache first
+    cache_key = f"{feed_url}_{timeout}"
+    if cache_key in _feed_cache:
+        cached_data, timestamp = _feed_cache[cache_key]
+        if time.time() - timestamp < _CACHE_TIMEOUT:
+            LOG.debug(f"Cache hit for {feed_url}")
+            return cached_data
+    
     LOG.info(f"Fetching: {feed_url}")
     try:
         r = httpx.get(feed_url, timeout=timeout,
@@ -420,6 +478,7 @@ def fetch_feed(feed_url, timeout=20) -> list:
         if r.status_code != 200:
             LOG.warning(f"Feed {feed_url} → {r.status_code}")
             return []
+        
         feed = feedparser.parse(r.content)
         items = []
         for e in feed.entries:
@@ -434,8 +493,56 @@ def fetch_feed(feed_url, timeout=20) -> list:
                 "video_url":  video_url,
                 "video_type": video_type,
             })
+        
+        # Cache the results
+        _feed_cache[cache_key] = (items, time.time())
+        
         LOG.info(f"  → {len(items)} articles from {feed_url}")
         return items
     except Exception as exc:
         LOG.error(f"Fetch error {feed_url}: {exc}")
         return []
+
+def clear_cache():
+    """Clear the feed cache."""
+    _feed_cache.clear()
+    LOG.info("Feed cache cleared")
+
+# ---------------------------------------------------------------------------
+# Dependency checks
+# ---------------------------------------------------------------------------
+def check_dependencies():
+    """Check if required dependencies are available."""
+    missing = []
+    
+    # Check VLC
+    try:
+        import vlc
+    except ImportError:
+        missing.append("python-vlc (for video playback)")
+    
+    # Check PIL/Pillow
+    try:
+        from PIL import Image
+    except ImportError:
+        missing.append("Pillow (for image display)")
+    
+    # Check httpx
+    try:
+        import httpx
+    except ImportError:
+        missing.append("httpx (for HTTP requests)")
+    
+    # Check feedparser
+    try:
+        import feedparser
+    except ImportError:
+        missing.append("feedparser (for RSS parsing)")
+    
+    if missing:
+        LOG.warning(f"Missing dependencies: {', '.join(missing)}")
+        LOG.warning("Some features may not work properly")
+        return False
+    
+    LOG.info("All dependencies available")
+    return True
