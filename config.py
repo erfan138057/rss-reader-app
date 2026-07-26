@@ -1,5 +1,5 @@
 """
-config.py - تنظیمات برنامه
+config.py - App configuration
 """
 import os
 import json
@@ -8,7 +8,6 @@ _BASE = os.path.dirname(os.path.abspath(__file__))
 DB_FILE       = os.path.join(_BASE, "rss_reader.db")
 SETTINGS_FILE = os.path.join(_BASE, "settings.json")
 
-# سرورهای DoH پیش‌فرض
 DOH_SERVERS = [
     {"name": "Cloudflare",     "ip": "1.1.1.1",         "host": "cloudflare-dns.com"},
     {"name": "Cloudflare Alt", "ip": "1.0.0.1",         "host": "cloudflare-dns.com"},
@@ -23,7 +22,7 @@ DOH_SERVERS = [
 ]
 
 ACTIVE_DOH     = DOH_SERVERS[0]
-CHECK_INTERVAL = 300   # ثانیه، 0 = غیرفعال
+CHECK_INTERVAL = 300
 
 DEFAULT_FEEDS = [
     "https://feeds.bbci.co.uk/news/rss.xml",
@@ -38,16 +37,29 @@ FILTER_TEST_SITES = [
     "www.bbc.com", "www.theguardian.com",
 ]
 
-# ---- بارگذاری / ذخیره تنظیمات ----
+# Default settings
+DEFAULTS = {
+    "theme":          "dark",
+    "language":       "en",
+    "check_interval": 300,
+    "sort":           "newest",
+    "show_read":      True,
+    "load_images":    True,
+    "font_size":      9,
+    "card_style":     "telegram",
+    "video_internal": True,
+    "dns_auto":       False,
+}
 
 def load_settings() -> dict:
+    s = dict(DEFAULTS)
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, encoding="utf-8") as f:
-                return json.load(f)
+                s.update(json.load(f))
         except Exception:
             pass
-    return {}
+    return s
 
 def save_settings(data: dict):
     try:

@@ -1,6 +1,6 @@
 """
-core.py - موتور RSS خوان
-شامل: DNS اسکنر + DoH + فچ فید + تصویر + SQLite + وضعیت اینترنت + لاگ
+core.py - RSS Reader engine
+DNS scanner + DoH + feed fetch + images + video detection + SQLite + internet monitor + log
 """
 import httpx
 import feedparser
@@ -18,334 +18,296 @@ from datetime import datetime
 import config
 
 # ---------------------------------------------------------------------------
-# لاگ مرکزی
+# Logger
 # ---------------------------------------------------------------------------
-
 class AppLogger:
-    """لاگ در حافظه + فایل + callback برای UI."""
-    def __init__(self, max_lines: int = 500):
-        self._lines: list[str] = []
+    def __init__(self, max_lines=500):
+        self._lines = []
         self._max = max_lines
         self._lock = threading.Lock()
-        self._callbacks: list = []
-        # لاگر استاندارد
+        self._callbacks = []
         self.logger = logging.getLogger("RSSReader")
         self.logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s",
-                                                datefmt="%H:%M:%S"))
-        self.logger.addHandler(handler)
+        h = logging.StreamHandler(sys.stdout)
+        h.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%H:%M:%S"))
+        self.logger.addHandler(h)
 
-    def _write(self, level: str, msg: str):
+    def _write(self, level, msg):
         ts = datetime.now().strftime("%H:%M:%S")
         line = f"[{ts}] {level}  {msg}"
         with self._lock:
             self._lines.append(line)
             if len(self._lines) > self._max:
                 self._lines = self._lines[-self._max:]
-        for cb in self._callbacks:
-            try:
-                cb(line)
-            except Exception:
-                pass
+        for cb in list(self._callbacks):
+            try: cb(line)
+            except: pass
 
-    def add_callback(self, cb):
-        self._callbacks.append(cb)
-
-    def remove_callback(self, cb):
-        self._callbacks = [c for c in self._callbacks if c is not cb]
-
-    def info(self, msg):
-        self.logger.info(msg)
-        self._write("INFO ", msg)
-
-    def warning(self, msg):
-        self.logger.warning(msg)
-        self._write("WARN ", msg)
-
-    def error(self, msg):
-        self.logger.error(msg)
-        self._write("ERROR", msg)
-
-    def debug(self, msg):
-        self.logger.debug(msg)
-        self._write("DEBUG", msg)
-
-    def get_lines(self) -> list[str]:
-        with self._lock:
-            return list(self._lines)
+    def add_callback(self, cb):    self._callbacks.append(cb)
+    def remove_callback(self, cb): self._callbacks = [c for c in self._callbacks if c is not cb]
+    def get_lines(self):
+        with self._lock: return list(self._lines)
+    def info(self, m):    self.logger.info(m);    self._write("INFO ", m)
+    def warning(self, m): self.logger.warning(m); self._write("WARN ", m)
+    def error(self, m):   self.logger.error(m);   self._write("ERROR", m)
+    def debug(self, m):   self.logger.debug(m);   self._write("DEBUG", m)
 
 LOG = AppLogger()
 
 # ---------------------------------------------------------------------------
-# بخش ۱: DNS over HTTPS
+# DoH resolver
 # ---------------------------------------------------------------------------
-
 def _is_ip(h):
-    try:
-        socket.inet_aton(h)
-        return True
-    except OSError:
-        return False
-
+    try: socket.inet_aton(h); return True
+    except: return False
 
 def doh_resolve(host, doh_ip, doh_host, timeout=5, verify=True):
-    if _is_ip(host):
-        return host
+    if _is_ip(host): return host
     try:
-        r = httpx.get(
-            f"https://{doh_ip}/dns-query",
-            params={"name": host, "type": "A"},
-            headers={"accept": "application/dns-json", "host": doh_host},
-            timeout=timeout,
-            verify=verify,
-        )
-        data = r.json()
-        for ans in data.get("Answer", []):
-            if ans.get("type") == 1:
-                return ans["data"]
+        r = httpx.get(f"https://{doh_ip}/dns-query",
+                       params={"name": host, "type": "A"},
+                       headers={"accept": "application/dns-json", "host": doh_host},
+                       timeout=timeout, verify=verify)
+        for ans in r.json().get("Answer", []):
+            if ans.get("type") == 1: return ans["data"]
     except Exception as e:
-        if verify:
-            return doh_resolve(host, doh_ip, doh_host, timeout, verify=False)
+        if verify: return doh_resolve(host, doh_ip, doh_host, timeout, verify=False)
         LOG.debug(f"DoH fail {host}@{doh_ip}: {e}")
     return None
-
 
 _doh_lock = threading.Lock()
 
 def install_doh_resolver(doh_ip, doh_host):
     with _doh_lock:
         orig = socket.getaddrinfo
-        def patched(host, *args, **kwargs):
-            if _is_ip(host):
-                return orig(host, *args, **kwargs)
+        def patched(host, *a, **kw):
+            if _is_ip(host): return orig(host, *a, **kw)
             ip = doh_resolve(host, doh_ip, doh_host)
-            if ip:
-                return orig(ip, *args, **kwargs)
-            return orig(host, *args, **kwargs)
+            return orig(ip if ip else host, *a, **kw)
         socket.getaddrinfo = patched
-    LOG.info(f"DoH فعال: {doh_host} ({doh_ip})")
+    LOG.info(f"DoH active: {doh_host} ({doh_ip})")
 
 # ---------------------------------------------------------------------------
-# بخش ۲: DNS اسکنر
+# DNS Scanner (DoH)
 # ---------------------------------------------------------------------------
+_BLOCKED_IPS = {"10.10.34.34","10.10.34.35","10.10.34.36",
+                 "178.22.122.100","185.55.226.26","185.55.225.25"}
 
-_BLOCKED_IPS = {
-    "10.10.34.34", "10.10.34.35", "10.10.34.36",
-    "178.22.122.100", "185.55.226.26", "185.55.225.25",
-}
-
-def _is_blocked_ip(ip: str) -> bool:
-    return ip in _BLOCKED_IPS
-
+def _is_blocked_ip(ip): return ip in _BLOCKED_IPS
 
 class DNSScanner:
     TEST_DOMAIN = "www.google.com"
 
-    def scan_server(self, server: dict, filter_sites: list) -> dict:
-        result = {
-            "name": server["name"], "ip": server["ip"], "host": server["host"],
-            "working": False, "latency_ms": None, "filters": {},
-        }
+    def scan_server(self, server, filter_sites):
+        result = {**server, "working": False, "latency_ms": None, "filters": {}}
         t0 = time.monotonic()
         ip = doh_resolve(self.TEST_DOMAIN, server["ip"], server["host"], timeout=4)
-        latency = (time.monotonic() - t0) * 1000
         if ip is None:
-            LOG.warning(f"DNS {server['name']} پاسخ نداد")
+            LOG.warning(f"DNS {server['name']} no response")
             return result
         result["working"] = True
-        result["latency_ms"] = round(latency)
-        LOG.info(f"DNS {server['name']} → {latency:.0f}ms")
+        result["latency_ms"] = round((time.monotonic() - t0) * 1000)
+        LOG.info(f"DNS {server['name']} → {result['latency_ms']}ms")
         for site in filter_sites:
             try:
-                resolved = doh_resolve(site, server["ip"], server["host"], timeout=3)
-                result["filters"][site] = _is_blocked_ip(resolved) if resolved else None
-            except Exception:
-                result["filters"][site] = None
+                res = doh_resolve(site, server["ip"], server["host"], timeout=3)
+                result["filters"][site] = _is_blocked_ip(res) if res else None
+            except: result["filters"][site] = None
         return result
 
-    def scan_all(self, servers, filter_sites, progress_cb=None) -> list:
+    def scan_all(self, servers, filter_sites, progress_cb=None):
         results = [None] * len(servers)
         threads = []
         def worker(i, srv):
             r = self.scan_server(srv, filter_sites)
             results[i] = r
-            if progress_cb:
-                progress_cb(r)
+            if progress_cb: progress_cb(r)
         for i, srv in enumerate(servers):
             t = threading.Thread(target=worker, args=(i, srv), daemon=True)
-            threads.append(t)
-            t.start()
-        for t in threads:
-            t.join()
-        return [r for r in results if r is not None]
+            threads.append(t); t.start()
+        for t in threads: t.join()
+        return [r for r in results if r]
 
-    def best_server(self, results: list) -> dict | None:
+    def best_server(self, results):
         working = [r for r in results if r["working"]]
-        if not working:
-            return None
-        def score(r):
-            open_count = sum(1 for v in r["filters"].values() if v is False)
-            return (-open_count, r["latency_ms"] or 9999)
-        return min(working, key=score)
+        if not working: return None
+        return min(working, key=lambda r: (
+            -sum(1 for v in r["filters"].values() if v is False),
+            r["latency_ms"] or 9999))
 
 # ---------------------------------------------------------------------------
-# بخش ۳: وضعیت اینترنت ایران
+# Plain DNS Scanner (port 53) — for when internet is cut
 # ---------------------------------------------------------------------------
+class PlainDNSScanner:
+    TEST_DOMAIN = "google.com"
 
+    def scan_ip(self, ip: str, timeout=3) -> dict:
+        result = {"ip": ip, "working": False, "latency_ms": None}
+        try:
+            t0 = time.monotonic()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.settimeout(timeout)
+            # minimal DNS query for google.com A record
+            query = (b"\xaa\xbb\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00"
+                     b"\x06google\x03com\x00\x00\x01\x00\x01")
+            sock.sendto(query, (ip, 53))
+            data, _ = sock.recvfrom(512)
+            sock.close()
+            if len(data) > 12:
+                result["working"] = True
+                result["latency_ms"] = round((time.monotonic() - t0) * 1000)
+        except Exception:
+            pass
+        return result
+
+    def scan_list(self, ips: list, progress_cb=None, max_workers=100) -> list:
+        results = []
+        lock = threading.Lock()
+        sem = threading.Semaphore(max_workers)
+
+        def worker(ip):
+            with sem:
+                r = self.scan_ip(ip)
+                with lock:
+                    results.append(r)
+                if progress_cb: progress_cb(r)
+
+        threads = [threading.Thread(target=worker, args=(ip,), daemon=True) for ip in ips]
+        for t in threads: t.start()
+        for t in threads: t.join()
+        return sorted(results, key=lambda r: r["latency_ms"] or 9999)
+
+# ---------------------------------------------------------------------------
+# Internet Monitor
+# ---------------------------------------------------------------------------
 class InternetMonitor:
-    """
-    هر N ثانیه وضعیت اتصال اینترنت ایران رو چک میکنه.
-    از Cloudflare Radar API استفاده میکنه (رایگان، بدون نیاز به key).
-    fallback: تست مستقیم ping به چند سرور.
-    """
-    RADAR_URL = "https://radar.cloudflare.com/api/v4/radar/quality/iqi/summary"
-    PING_HOSTS = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+    PING_HOSTS = [("1.1.1.1", 443), ("8.8.8.8", 443), ("9.9.9.9", 443)]
 
-    def __init__(self, interval: int = 60, on_update=None):
+    def __init__(self, interval=60, on_update=None):
         self.interval = interval
         self.on_update = on_update
         self._running = False
-        self._last: dict = {"percent": None, "label": "در حال بررسی...", "color": "gray"}
+        self._last = {"percent": None, "label": "Checking...", "color": "gray"}
 
     def start(self):
         self._running = True
-        t = threading.Thread(target=self._loop, daemon=True)
-        t.start()
+        threading.Thread(target=self._loop, daemon=True).start()
 
-    def stop(self):
-        self._running = False
+    def stop(self): self._running = False
 
     def _loop(self):
         while self._running:
-            result = self._check()
-            self._last = result
-            if self.on_update:
-                self.on_update(result)
+            r = self._check()
+            self._last = r
+            if self.on_update: self.on_update(r)
             time.sleep(self.interval)
 
-    def _check(self) -> dict:
-        # روش ۱: تست ping ساده به چند سرور معتبر
-        ok = 0
-        total = len(self.PING_HOSTS)
-        latencies = []
-        for host in self.PING_HOSTS:
+    def _check(self):
+        ok, latencies = 0, []
+        for host, port in self.PING_HOSTS:
             try:
                 t0 = time.monotonic()
-                s = socket.create_connection((host, 443), timeout=4)
+                s = socket.create_connection((host, port), timeout=4)
                 s.close()
                 latencies.append((time.monotonic() - t0) * 1000)
                 ok += 1
-            except Exception:
-                pass
-
-        percent = round((ok / total) * 100)
-        avg_ms = round(sum(latencies) / len(latencies)) if latencies else None
-
-        if percent >= 80:
-            label = f"اینترنت: خوب ({avg_ms}ms)" if avg_ms else "اینترنت: خوب"
-            color = "#43A047"
-        elif percent >= 40:
-            label = f"اینترنت: متوسط ({percent}%)"
-            color = "#FB8C00"
+            except: pass
+        pct = round((ok / len(self.PING_HOSTS)) * 100)
+        ms  = round(sum(latencies)/len(latencies)) if latencies else None
+        if pct >= 80:
+            label, color = f"Good ({ms}ms)" if ms else "Good", "#43A047"
+        elif pct >= 40:
+            label, color = f"Fair ({pct}%)", "#FB8C00"
         else:
-            label = f"اینترنت: ضعیف ({percent}%)"
-            color = "#E53935"
-
-        LOG.info(f"وضعیت اینترنت: {percent}% — {label}")
-        return {"percent": percent, "label": label, "color": color, "latency_ms": avg_ms}
+            label, color = f"Poor ({pct}%)", "#E53935"
+        LOG.info(f"Internet status: {pct}% — {label}")
+        return {"percent": pct, "label": label, "color": color, "latency_ms": ms}
 
     @property
-    def last(self):
-        return self._last
+    def last(self): return self._last
 
 # ---------------------------------------------------------------------------
-# بخش ۴: دیتابیس
+# Database
 # ---------------------------------------------------------------------------
-
 class Store:
     def __init__(self, db_file="rss_reader.db"):
         self.conn = sqlite3.connect(db_file, check_same_thread=False)
         self._lock = threading.Lock()
         self.conn.executescript("""
             CREATE TABLE IF NOT EXISTS items (
-                id        TEXT PRIMARY KEY,
-                feed      TEXT,
-                title     TEXT,
-                link      TEXT,
-                published TEXT,
-                summary   TEXT,
-                image_url TEXT,
-                seen      INTEGER DEFAULT 0,
+                id          TEXT PRIMARY KEY,
+                feed        TEXT,
+                title       TEXT,
+                link        TEXT,
+                published   TEXT,
+                summary     TEXT,
+                image_url   TEXT,
+                video_url   TEXT,
+                video_type  TEXT,
+                seen        INTEGER DEFAULT 0,
                 click_count INTEGER DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS feeds (
-                url       TEXT PRIMARY KEY,
-                title     TEXT,
-                pinned    INTEGER DEFAULT 0,
-                added_at  TEXT
+                url      TEXT PRIMARY KEY,
+                title    TEXT,
+                pinned   INTEGER DEFAULT 0,
+                added_at TEXT
             );
         """)
         self.conn.commit()
-        LOG.info(f"دیتابیس باز شد: {db_file}")
+        LOG.info(f"DB opened: {db_file}")
 
-    # ---- آیتم‌ها ----
     def upsert(self, item: dict, feed_url: str):
         with self._lock:
             self.conn.execute("""
-                INSERT INTO items (id, feed, title, link, published, summary, image_url, seen, click_count)
-                VALUES (:id, :feed, :title, :link, :published, :summary, :image_url, 0, 0)
+                INSERT INTO items
+                    (id,feed,title,link,published,summary,image_url,video_url,video_type,seen,click_count)
+                VALUES (:id,:feed,:title,:link,:published,:summary,:image_url,:video_url,:video_type,0,0)
                 ON CONFLICT(id) DO UPDATE SET
-                    title=excluded.title,
-                    summary=excluded.summary,
-                    image_url=COALESCE(excluded.image_url, items.image_url)
+                    title=excluded.title, summary=excluded.summary,
+                    image_url=COALESCE(excluded.image_url, items.image_url),
+                    video_url=COALESCE(excluded.video_url, items.video_url),
+                    video_type=COALESCE(excluded.video_type, items.video_type)
             """, {**item, "feed": feed_url})
             self.conn.commit()
 
-    def mark_seen(self, item_id: str):
+    def mark_seen(self, item_id):
         with self._lock:
             self.conn.execute(
                 "UPDATE items SET seen=1, click_count=click_count+1 WHERE id=?", (item_id,))
             self.conn.commit()
 
     def get_items(self, feed_url=None, sort="newest") -> list:
-        order = {
-            "newest":  "published DESC, rowid DESC",
-            "oldest":  "published ASC, rowid ASC",
-        }.get(sort, "published DESC, rowid DESC")
+        order = "published ASC, rowid ASC" if sort == "oldest" else "published DESC, rowid DESC"
         with self._lock:
-            if feed_url:
-                cur = self.conn.execute(
-                    f"SELECT * FROM items WHERE feed=? ORDER BY {order}", (feed_url,))
-            else:
-                cur = self.conn.execute(f"SELECT * FROM items ORDER BY {order}")
+            q = f"SELECT * FROM items{' WHERE feed=?' if feed_url else ''} ORDER BY {order}"
+            cur = self.conn.execute(q, (feed_url,) if feed_url else ())
             cols = [c[0] for c in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
+            return [dict(zip(cols, r)) for r in cur.fetchall()]
 
-    def update_image(self, item_id: str, image_url: str):
+    def update_image(self, item_id, image_url):
         with self._lock:
             self.conn.execute(
                 "UPDATE items SET image_url=? WHERE id=? AND (image_url IS NULL OR image_url='')",
                 (image_url, item_id))
             self.conn.commit()
 
-    # ---- فیدها ----
-    def add_feed(self, url: str, title: str = ""):
+    def add_feed(self, url, title=""):
         with self._lock:
             self.conn.execute(
-                "INSERT OR IGNORE INTO feeds (url, title, pinned, added_at) VALUES (?,?,0,?)",
+                "INSERT OR IGNORE INTO feeds (url,title,pinned,added_at) VALUES (?,?,0,?)",
                 (url, title, datetime.now().isoformat()))
             self.conn.commit()
-        LOG.info(f"فید اضافه شد: {url}")
+        LOG.info(f"Feed added: {url}")
 
-    def remove_feed(self, url: str):
+    def remove_feed(self, url):
         with self._lock:
             self.conn.execute("DELETE FROM feeds WHERE url=?", (url,))
             self.conn.execute("DELETE FROM items WHERE feed=?", (url,))
             self.conn.commit()
-        LOG.info(f"فید حذف شد: {url}")
+        LOG.info(f"Feed removed: {url}")
 
-    def pin_feed(self, url: str, pinned: bool):
+    def pin_feed(self, url, pinned):
         with self._lock:
             self.conn.execute("UPDATE feeds SET pinned=? WHERE url=?", (int(pinned), url))
             self.conn.commit()
@@ -353,48 +315,79 @@ class Store:
     def get_feeds(self) -> list:
         with self._lock:
             cur = self.conn.execute(
-                "SELECT url, title, pinned FROM feeds ORDER BY pinned DESC, added_at ASC")
+                "SELECT url,title,pinned FROM feeds ORDER BY pinned DESC, added_at ASC")
             return [{"url": r[0], "title": r[1], "pinned": bool(r[2])} for r in cur.fetchall()]
 
 # ---------------------------------------------------------------------------
-# بخش ۵: تصویر
+# Video detection
 # ---------------------------------------------------------------------------
+YOUTUBE_RE = re.compile(
+    r'(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})')
+VIMEO_RE   = re.compile(r'(?:https?://)?(?:www\.)?vimeo\.com/(\d+)')
+VIDEO_EXT  = re.compile(r'\.(mp4|webm|mkv|avi|mov|m3u8)(\?|$)', re.I)
 
-def extract_image_from_feed_entry(entry) -> str | None:
+def detect_video(entry) -> tuple:
+    """Returns (video_url, video_type) or ('', '')."""
+    # enclosures
+    for enc in getattr(entry, "enclosures", []):
+        url = enc.get("href") or enc.get("url", "")
+        if enc.get("type","").startswith("video/") or VIDEO_EXT.search(url):
+            return url, "direct"
+
+    # media:content
+    for m in getattr(entry, "media_content", []):
+        url = m.get("url","")
+        if m.get("medium") == "video" or VIDEO_EXT.search(url):
+            return url, "direct"
+
+    # link
+    link = getattr(entry, "link", "") or ""
+    yt = YOUTUBE_RE.search(link)
+    if yt: return f"https://www.youtube.com/watch?v={yt.group(1)}", "youtube"
+    vm = VIMEO_RE.search(link)
+    if vm: return f"https://vimeo.com/{vm.group(1)}", "vimeo"
+    if VIDEO_EXT.search(link): return link, "direct"
+
+    # summary / content
+    for field in ["summary", "content"]:
+        val = getattr(entry, field, None)
+        text = " ".join(v.get("value","") for v in val) if isinstance(val, list) else (val or "")
+        for pat, vtype in [(YOUTUBE_RE,"youtube"),(VIMEO_RE,"vimeo")]:
+            m = pat.search(text)
+            if m:
+                base = "https://www.youtube.com/watch?v=" if vtype=="youtube" else "https://vimeo.com/"
+                id_  = m.group(1)
+                return f"{base}{id_}", vtype
+        ext = VIDEO_EXT.search(text)
+        if ext:
+            url_m = re.search(r'https?://\S+' + ext.group(1), text, re.I)
+            if url_m: return url_m.group(0), "direct"
+
+    return "", ""
+
+# ---------------------------------------------------------------------------
+# Image helpers
+# ---------------------------------------------------------------------------
+def extract_image_from_feed_entry(entry) -> str:
     media = getattr(entry, "media_thumbnail", None)
     if media and isinstance(media, list) and media[0].get("url"):
         return media[0]["url"]
-    media_content = getattr(entry, "media_content", None)
-    if media_content and isinstance(media_content, list):
-        for m in media_content:
-            if m.get("medium") == "image" and m.get("url"):
-                return m["url"]
-            if m.get("url", "").lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
-                return m["url"]
+    for m in getattr(entry, "media_content", []):
+        if m.get("medium") == "image" and m.get("url"): return m["url"]
+        if m.get("url","").lower().endswith((".jpg",".jpeg",".png",".webp",".gif")): return m["url"]
     for enc in getattr(entry, "enclosures", []):
-        if enc.get("type", "").startswith("image/"):
-            return enc.get("href") or enc.get("url")
-    for field in ["summary", "content"]:
-        text = ""
+        if enc.get("type","").startswith("image/"): return enc.get("href") or enc.get("url","")
+    for field in ["summary","content"]:
         val = getattr(entry, field, None)
-        if isinstance(val, list):
-            text = " ".join(v.get("value", "") for v in val)
-        elif isinstance(val, str):
-            text = val
+        text = " ".join(v.get("value","") for v in val) if isinstance(val,list) else (val or "")
         m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', text, re.I)
-        if m:
-            url = m.group(1)
-            if url.startswith("http"):
-                return url
-    return None
+        if m and m.group(1).startswith("http"): return m.group(1)
+    return ""
 
-
-def fetch_og_image(page_url: str, timeout: int = 8) -> str | None:
+def fetch_og_image(page_url, timeout=8) -> str:
     try:
         r = httpx.get(page_url, timeout=timeout,
-                       headers={"User-Agent": "Mozilla/5.0"}, follow_redirects=True)
-        if r.status_code != 200:
-            return None
+                       headers={"User-Agent":"Mozilla/5.0"}, follow_redirects=True)
         head = r.text[:8000]
         for pat in [
             r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
@@ -402,50 +395,47 @@ def fetch_og_image(page_url: str, timeout: int = 8) -> str | None:
             r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
         ]:
             m = re.search(pat, head, re.I)
-            if m:
-                return m.group(1)
-    except Exception:
-        pass
-    return None
+            if m: return m.group(1)
+    except: pass
+    return ""
 
-
-def fetch_image_bytes(url: str, timeout: int = 10) -> bytes | None:
+def fetch_image_bytes(url, timeout=10) -> bytes:
     try:
         r = httpx.get(url, timeout=timeout,
-                       headers={"User-Agent": "Mozilla/5.0"}, follow_redirects=True)
-        if r.status_code == 200 and "image" in r.headers.get("content-type", ""):
+                       headers={"User-Agent":"Mozilla/5.0"}, follow_redirects=True)
+        if r.status_code == 200 and "image" in r.headers.get("content-type",""):
             return r.content
-    except Exception:
-        pass
-    return None
+    except: pass
+    return b""
 
 # ---------------------------------------------------------------------------
-# بخش ۶: فچ فید
+# Feed fetch
 # ---------------------------------------------------------------------------
-
-def fetch_feed(feed_url: str, timeout: int = 20) -> list:
-    LOG.info(f"دریافت فید: {feed_url}")
+def fetch_feed(feed_url, timeout=20) -> list:
+    LOG.info(f"Fetching: {feed_url}")
     try:
         r = httpx.get(feed_url, timeout=timeout,
-                       headers={"User-Agent": "Mozilla/5.0 (compatible; RSSReader/1.0)"},
+                       headers={"User-Agent":"Mozilla/5.0 (compatible; RSSReader/1.0)"},
                        follow_redirects=True)
         if r.status_code != 200:
-            LOG.warning(f"فید {feed_url} → {r.status_code}")
+            LOG.warning(f"Feed {feed_url} → {r.status_code}")
             return []
         feed = feedparser.parse(r.content)
         items = []
         for e in feed.entries:
-            image_url = extract_image_from_feed_entry(e)
+            video_url, video_type = detect_video(e)
             items.append({
-                "id":        e.get("id") or e.get("link") or e.get("title", ""),
-                "title":     html.unescape(e.get("title", "(بدون عنوان)")),
-                "link":      e.get("link", ""),
-                "summary":   html.unescape(re.sub(r"<[^>]+>", "", e.get("summary", "")))[:600],
-                "published": e.get("published", e.get("updated", "")),
-                "image_url": image_url or "",
+                "id":         e.get("id") or e.get("link") or e.get("title",""),
+                "title":      html.unescape(e.get("title","(no title)")),
+                "link":       e.get("link",""),
+                "summary":    html.unescape(re.sub(r"<[^>]+>","", e.get("summary","")))[:800],
+                "published":  e.get("published", e.get("updated","")),
+                "image_url":  extract_image_from_feed_entry(e),
+                "video_url":  video_url,
+                "video_type": video_type,
             })
-        LOG.info(f"  → {len(items)} خبر از {feed_url}")
+        LOG.info(f"  → {len(items)} articles from {feed_url}")
         return items
     except Exception as exc:
-        LOG.error(f"خطا در فچ {feed_url}: {exc}")
+        LOG.error(f"Fetch error {feed_url}: {exc}")
         return []

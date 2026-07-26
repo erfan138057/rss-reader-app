@@ -1,0 +1,192 @@
+"""
+i18n.py - Internationalization (EN default, FA optional)
+"""
+
+STRINGS = {
+    "en": {
+        # App
+        "app_title":        "RSS Reader",
+        "ready":            "Ready",
+        # Sidebar
+        "all_feeds":        "All Feeds",
+        "dns_scanner":      "DNS Scanner",
+        "add_feed":         "Add Feed",
+        "check_all":        "Refresh All",
+        "log":              "App Log",
+        "settings":         "Settings",
+        "feeds":            "FEEDS",
+        # Header
+        "all_news":         "All News",
+        "show_read":        "Show read",
+        "search_placeholder": "Search...",
+        "view_telegram":    "Chat",
+        "view_reddit":      "Reddit",
+        # Counts
+        "unread_of":        "{unread} unread / {total}",
+        "n_articles":       "{n} articles",
+        # Status
+        "fetching":         "Fetching {url}...",
+        "fetched":          "{n} articles from {url}",
+        "checking_all":     "Checking all feeds...",
+        "checked_all":      "✅ All feeds refreshed.",
+        "no_articles":      "No articles to show.",
+        "dns_changed":      "✅ DNS → {name}",
+        # Feed mgmt
+        "add_feed_prompt":  "Enter RSS feed URL:",
+        "add_feed_title":   "Add Feed",
+        "del_feed_confirm": "Delete this feed?\n{url}",
+        "del_feed_title":   "Delete Feed",
+        # Internet
+        "net_checking":     "Checking...",
+        "net_good":         "Internet: Good ({ms}ms)",
+        "net_fair":         "Internet: Fair ({pct}%)",
+        "net_poor":         "Internet: Poor ({pct}%)",
+        "net_label":        "🌐 {label}",
+        # DNS Scanner
+        "dns_win_title":    "DNS Scanner",
+        "scanning":         "Scanning...",
+        "scan_done":        "Done — {ok}/{total} servers active",
+        "use_dns":          "✅ Use this DNS",
+        "rescan":           "🔄 Rescan",
+        "best_auto":        "✨ Auto-best",
+        "add_custom_dns":   "Add",
+        "custom_name":      "Name",
+        "custom_ip":        "IP (e.g. 1.1.1.1)",
+        "custom_host":      "Host (e.g. cloudflare-dns.com)",
+        "load_file":        "📂 Load from file",
+        "scan_wait":        "Scan not finished yet!",
+        "no_server":        "No active server found.",
+        "dns_err_fields":   "Please fill in Name, IP and Host.",
+        # Log
+        "log_title":        "App Log",
+        "log_clear":        "🗑 Clear",
+        # Settings
+        "settings_title":   "Settings",
+        "section_general":  "General",
+        "section_feeds":    "Feeds",
+        "section_dns":      "DNS",
+        "section_display":  "Display",
+        "section_video":    "Video",
+        "lang_label":       "Language",
+        "theme_label":      "Theme",
+        "theme_dark":       "Dark",
+        "theme_light":      "Light",
+        "interval_label":   "Auto-refresh (seconds, 0=off)",
+        "sort_label":       "Default sort",
+        "sort_newest":      "Newest first",
+        "sort_oldest":      "Oldest first",
+        "show_read_label":  "Show read articles by default",
+        "img_load_label":   "Load images",
+        "font_size_label":  "Font size",
+        "card_style_label": "Default card style",
+        "video_internal":   "Prefer internal player",
+        "video_fallback":   "Fallback to browser",
+        "dns_auto_label":   "Auto-select best DNS on start",
+        "save":             "Save",
+        "cancel":           "Cancel",
+        "saved":            "Settings saved.",
+        # Detail window
+        "open_browser":     "🔗 Open in browser",
+        "close":            "✕ Close",
+        "no_summary":       "No summary available.",
+        # Video
+        "play_video":       "▶ Play video",
+        "video_title":      "Video Player",
+        "video_no_vlc":     "VLC not found. Opening in browser...",
+    },
+    "fa": {
+        "app_title":        "RSS خوان",
+        "ready":            "آماده",
+        "all_feeds":        "همه فیدها",
+        "dns_scanner":      "اسکنر DNS",
+        "add_feed":         "افزودن فید",
+        "check_all":        "چک همه",
+        "log":              "لاگ برنامه",
+        "settings":         "تنظیمات",
+        "feeds":            "فیدها",
+        "all_news":         "همه اخبار",
+        "show_read":        "نمایش خوانده‌شده",
+        "search_placeholder": "جستجو...",
+        "view_telegram":    "تلگرام",
+        "view_reddit":      "ردیت",
+        "unread_of":        "{unread} نخوانده / {total}",
+        "n_articles":       "{n} خبر",
+        "fetching":         "دریافت {url}...",
+        "fetched":          "{n} خبر از {url}",
+        "checking_all":     "بررسی همه فیدها...",
+        "checked_all":      "✅ همه فیدها بررسی شدند.",
+        "no_articles":      "خبری برای نمایش نیست.",
+        "dns_changed":      "✅ DNS → {name}",
+        "add_feed_prompt":  "آدرس RSS را وارد کنید:",
+        "add_feed_title":   "افزودن فید",
+        "del_feed_confirm": "این فید حذف شود؟\n{url}",
+        "del_feed_title":   "حذف فید",
+        "net_checking":     "بررسی...",
+        "net_good":         "اینترنت: خوب ({ms}ms)",
+        "net_fair":         "اینترنت: متوسط ({pct}%)",
+        "net_poor":         "اینترنت: ضعیف ({pct}%)",
+        "net_label":        "🌐 {label}",
+        "dns_win_title":    "اسکنر DNS",
+        "scanning":         "در حال اسکن...",
+        "scan_done":        "اتمام — {ok}/{total} سرور فعال",
+        "use_dns":          "✅ استفاده از این DNS",
+        "rescan":           "🔄 اسکن مجدد",
+        "best_auto":        "✨ بهترین خودکار",
+        "add_custom_dns":   "اضافه کن",
+        "custom_name":      "نام",
+        "custom_ip":        "IP",
+        "custom_host":      "Host",
+        "load_file":        "📂 بارگذاری فایل",
+        "scan_wait":        "اسکن هنوز تموم نشده!",
+        "no_server":        "هیچ سرور فعالی پیدا نشد.",
+        "dns_err_fields":   "نام، IP و Host را کامل وارد کنید.",
+        "log_title":        "لاگ برنامه",
+        "log_clear":        "🗑 پاک کردن",
+        "settings_title":   "تنظیمات",
+        "section_general":  "عمومی",
+        "section_feeds":    "فیدها",
+        "section_dns":      "DNS",
+        "section_display":  "نمایش",
+        "section_video":    "ویدیو",
+        "lang_label":       "زبان",
+        "theme_label":      "تم",
+        "theme_dark":       "تیره",
+        "theme_light":      "روشن",
+        "interval_label":   "بررسی خودکار (ثانیه، ۰=غیرفعال)",
+        "sort_label":       "مرتب‌سازی پیش‌فرض",
+        "sort_newest":      "جدیدترین",
+        "sort_oldest":      "قدیمی‌ترین",
+        "show_read_label":  "نمایش خوانده‌شده به‌صورت پیش‌فرض",
+        "img_load_label":   "بارگذاری تصاویر",
+        "font_size_label":  "اندازه فونت",
+        "card_style_label": "سبک کارت پیش‌فرض",
+        "video_internal":   "پلیر داخلی",
+        "video_fallback":   "باز شدن در مرورگر",
+        "dns_auto_label":   "انتخاب خودکار بهترین DNS",
+        "save":             "ذخیره",
+        "cancel":           "لغو",
+        "saved":            "تنظیمات ذخیره شد.",
+        "open_browser":     "🔗 باز در مرورگر",
+        "close":            "✕ بستن",
+        "no_summary":       "خلاصه‌ای موجود نیست.",
+        "play_video":       "▶ پخش ویدیو",
+        "video_title":      "پخش‌کننده ویدیو",
+        "video_no_vlc":     "VLC پیدا نشد. در مرورگر باز می‌شود...",
+    }
+}
+
+_lang = "en"
+
+def set_lang(lang: str):
+    global _lang
+    if lang in STRINGS:
+        _lang = lang
+
+def t(key: str, **kwargs) -> str:
+    s = STRINGS.get(_lang, STRINGS["en"]).get(key, STRINGS["en"].get(key, key))
+    if kwargs:
+        try:
+            return s.format(**kwargs)
+        except Exception:
+            return s
+    return s
