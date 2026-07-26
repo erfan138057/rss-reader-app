@@ -2,9 +2,6 @@
 
 A comprehensive Python desktop application for managing RSS feeds with advanced privacy and video features.
 
-!Python (https://img.shields.io/badge/Python-3.8%2B-blue)
-!License (https://img.shields.io/badge/License-MIT-green) 
-!Platform (https://img.shields.io/badge/Platform-Windows%2C%20Linux%2C%20Mac-lightgrey)
 
 ✨ Key Features
 
@@ -67,11 +64,6 @@ We love contributions! Here's how you can help:
 3. Submit Code - Send pull requests for improvements
 4. Improve Docs - Help us make documentation better
 
-📊 Project Stats
-
-!GitHub stars (https://img.shields.io/github/stars/erfan138057/rss-reader-app?style=social)
-!Git forks (https://img.shields.io/github/forks/erfan138057/rss-reader-app?style=social)
-!GitHub issues (https://img.shields.io/github/issues/erfan138057/rss-reader-app)
 
 📜 License
 
@@ -80,5 +72,3 @@ MIT License - see LICENSE file for details.
 ---
 
 ⭐️ If you find this project useful, please give it a star on GitHub! ⭐️
-
-همین الآن این رو در GitHub جایگزین کنید و انتشار رو شروع کنید! 🚀
