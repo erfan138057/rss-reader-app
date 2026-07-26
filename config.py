@@ -49,6 +49,8 @@ DEFAULTS = {
     "card_style":     "telegram",
     "video_internal": True,
     "dns_auto":       False,
+    "deleted_feeds":  [],   # feeds the user explicitly removed — never re-add
+    "added_feeds":    [],   # feeds the user manually added — always re-add
 }
 
 def load_settings() -> dict:

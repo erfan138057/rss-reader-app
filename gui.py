@@ -32,24 +32,68 @@ from i18n import t
 # ---------------------------------------------------------------------------
 THEMES = {
     "dark": {
-        "bg":"#17212B","sidebar":"#0E1621","card":"#1E2C3A","card_seen":"#17212B",
-        "card_hover":"#243447","accent":"#2196F3","accent2":"#64B5F6",
-        "text_primary":"#FFFFFF","text_secondary":"#7B8EA0","text_seen":"#5B6C7D",
-        "badge":"#2196F3","separator":"#0E1621","input_bg":"#242F3D",
-        "btn":"#2196F3","btn_hover":"#1976D2","danger":"#E53935",
-        "success":"#43A047","warning":"#FB8C00","panel":"#1C2A38",
-        "reddit_header":"#1A2839","reddit_card":"#1E2C3A","reddit_border":"#2A3D52",
-        "tag_bg":"#243447","tag_fg":"#64B5F6",
+        "bg":            "#0F1923",
+        "sidebar":       "#0A1219",
+        "card":          "#162231",
+        "card_seen":     "#0F1923",
+        "card_hover":    "#1E3248",
+        "accent":        "#3B82F6",
+        "accent2":       "#60A5FA",
+        "accent_glow":   "#1D4ED8",
+        "text_primary":  "#F1F5F9",
+        "text_secondary":"#6B8099",
+        "text_seen":     "#3D5166",
+        "badge":         "#3B82F6",
+        "badge_new":     "#EF4444",
+        "separator":     "#0A1219",
+        "input_bg":      "#1A2D40",
+        "btn":           "#3B82F6",
+        "btn_hover":     "#2563EB",
+        "danger":        "#EF4444",
+        "success":       "#10B981",
+        "warning":       "#F59E0B",
+        "panel":         "#131F2E",
+        "reddit_header": "#111C27",
+        "reddit_card":   "#162231",
+        "reddit_border": "#1E3248",
+        "tag_bg":        "#1E3A5F",
+        "tag_fg":        "#60A5FA",
+        "tag_video":     "#7C3AED",
+        "tag_video_fg":  "#C4B5FD",
+        "pin_color":     "#F59E0B",
+        "active_feed":   "#1D4ED8",
     },
     "light": {
-        "bg":"#F6F7F8","sidebar":"#FFFFFF","card":"#FFFFFF","card_seen":"#F0F2F5",
-        "card_hover":"#E8EDF2","accent":"#0079D3","accent2":"#1484D6",
-        "text_primary":"#1C1C1C","text_secondary":"#7C7C7C","text_seen":"#AAAAAA",
-        "badge":"#0079D3","separator":"#EDEFF1","input_bg":"#EDEFF1",
-        "btn":"#0079D3","btn_hover":"#006BBD","danger":"#E53935",
-        "success":"#43A047","warning":"#FB8C00","panel":"#EDEFF1",
-        "reddit_header":"#FFFFFF","reddit_card":"#FFFFFF","reddit_border":"#EDEFF1",
-        "tag_bg":"#E8F0FE","tag_fg":"#0079D3",
+        "bg":            "#F8FAFC",
+        "sidebar":       "#FFFFFF",
+        "card":          "#FFFFFF",
+        "card_seen":     "#F1F5F9",
+        "card_hover":    "#E2E8F0",
+        "accent":        "#2563EB",
+        "accent2":       "#3B82F6",
+        "accent_glow":   "#BFDBFE",
+        "text_primary":  "#0F172A",
+        "text_secondary":"#64748B",
+        "text_seen":     "#94A3B8",
+        "badge":         "#2563EB",
+        "badge_new":     "#EF4444",
+        "separator":     "#E2E8F0",
+        "input_bg":      "#F1F5F9",
+        "btn":           "#2563EB",
+        "btn_hover":     "#1D4ED8",
+        "danger":        "#EF4444",
+        "success":       "#10B981",
+        "warning":       "#F59E0B",
+        "panel":         "#F1F5F9",
+        "reddit_header": "#FFFFFF",
+        "reddit_card":   "#FFFFFF",
+        "reddit_border": "#E2E8F0",
+        "tag_bg":        "#EFF6FF",
+        "tag_fg":        "#2563EB",
+        "tag_video":     "#F3E8FF",
+        "tag_video_fg":  "#7C3AED",
+        "pin_color":     "#D97706",
+        "active_feed":   "#2563EB",
     },
 }
 C = THEMES["dark"]
@@ -132,27 +176,8 @@ class VideoWindow(tk.Toplevel):
             self._build_fallback()
 
     def _build_vlc(self):
-        frame = tk.Frame(self, bg="black")
-        frame.pack(fill="both", expand=True)
-
-        try:
-            instance = vlc.Instance()
-            self._player = instance.media_player_new()
-            media = instance.media_new(self._url)
-            self._player.set_media(media)
-            # Enable audio
-            self._player.audio_set_volume(100)  # Set volume to 100%
-            # embed into tk frame
-            self.update()
-            if hasattr(self._player, "set_hwnd"):
-                self._player.set_hwnd(frame.winfo_id())
-            elif hasattr(self._player, "set_xwindow"):
-                self._player.set_xwindow(frame.winfo_id())
-            self._player.play()
-        except Exception as e:
-            core.LOG.error(f"VLC error: {e}")
-            self._build_fallback()
-            return
+        self._vlc_frame = tk.Frame(self, bg="black")
+        self._vlc_frame.pack(fill="both", expand=True)
 
         ctrl = tk.Frame(self, bg=C["sidebar"], pady=8)
         ctrl.pack(fill="x")
@@ -160,7 +185,6 @@ class VideoWindow(tk.Toplevel):
               fg=C["text_primary"]).pack(side="left", padx=8)
         _btn(ctrl, "⏹ Stop", self._stop, bg=C["input_bg"],
               fg=C["text_primary"]).pack(side="left", padx=4)
-        # Volume controls
         tk.Label(ctrl, text="🔈", font=F["meta"], bg=C["sidebar"],
                   fg=C["text_secondary"]).pack(side="left", padx=(12,4))
         _btn(ctrl, "−", lambda: self._volume(-10), bg=C["input_bg"],
@@ -170,6 +194,8 @@ class VideoWindow(tk.Toplevel):
         _btn(ctrl, "🔗 Browser", lambda: webbrowser.open(self._url),
               bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=8)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        # Wait for window to fully render before embedding VLC
+        self.after(300, self._embed_vlc)
 
     def _build_youtube(self):
         # embed YouTube in a simple HTML view via browser fallback
@@ -206,6 +232,29 @@ class VideoWindow(tk.Toplevel):
                   fg=C["warning"], bg=C["bg"]).pack(pady=20)
         webbrowser.open(self._url)
         self.after(2000, self.destroy)
+
+    def _embed_vlc(self):
+        try:
+            self.update_idletasks()
+            instance = vlc.Instance("--no-xlib")
+            self._player = instance.media_player_new()
+            media = instance.media_new(self._url)
+            self._player.set_media(media)
+            self._player.audio_set_volume(100)
+            wid = self._vlc_frame.winfo_id()
+            import sys
+            if sys.platform.startswith("win"):
+                self._player.set_hwnd(wid)
+            elif sys.platform.startswith("darwin"):
+                self._player.set_nsobject(wid)
+            else:
+                self._player.set_xwindow(wid)
+            self._player.play()
+            core.LOG.info(f"VLC playing: {self._url}")
+        except Exception as e:
+            core.LOG.error(f"VLC embed error: {e}")
+            # fallback: open in browser
+            webbrowser.open(self._url)
 
     def _toggle(self):
         if self._player:
@@ -706,42 +755,53 @@ class NewsCard(tk.Frame):
         tc = C["text_seen"] if seen else C["text_primary"]
         mc = C["text_seen"] if seen else C["text_secondary"]
 
+        # Left accent bar (blue for unread)
+        bar_color = C["accent"] if not seen else C["separator"]
+        tk.Frame(self, width=3, bg=bar_color).pack(side="left", fill="y")
+
         self.img_lbl = tk.Label(self, bg=self._bg, image=self._ph,
                                  width=self.TW, height=self.TH)
         self.img_lbl.image = self._ph
-        self.img_lbl.pack(side="left", padx=(10,8), pady=8)
+        self.img_lbl.pack(side="left", padx=(8,8), pady=8)
 
         tf = tk.Frame(self, bg=self._bg)
         tf.pack(side="left", fill="both", expand=True, pady=8, padx=(0,8))
 
-        # Video badge
+        # Badges row
+        badge_row = tk.Frame(tf, bg=self._bg)
+        badge_row.pack(anchor="w", pady=(0,2))
         if self.item.get("video_url"):
-            tk.Label(tf, text="▶ VIDEO", font=F["tag"],
-                      fg=C["accent2"], bg=self._bg).pack(anchor="w")
+            vt = self.item.get("video_type","")
+            icon = "▶ YouTube" if vt=="youtube" else ("▶ Vimeo" if vt=="vimeo" else "▶ Video")
+            tk.Label(badge_row, text=icon, font=F["tag"],
+                      fg=C.get("tag_video_fg","#C4B5FD"),
+                      bg=C.get("tag_video","#7C3AED"),
+                      padx=5, pady=1).pack(side="left", padx=(0,4))
+        if not seen:
+            tk.Label(badge_row, text="NEW", font=F["tag"],
+                      fg="white", bg=C.get("badge_new", C["badge"]),
+                      padx=5, pady=1).pack(side="left")
 
         tk.Label(tf, text=self.item.get("title",""), font=F["title"],
                   fg=tc, bg=self._bg, anchor="w", justify="left",
-                  wraplength=400).pack(anchor="w")
+                  wraplength=420).pack(anchor="w")
 
         sm = self.item.get("summary","")
         if sm:
-            tk.Label(tf, text=sm[:100]+("…" if len(sm)>100 else ""),
+            tk.Label(tf, text=sm[:120]+("…" if len(sm)>120 else ""),
                       font=F["body"], fg=mc, bg=self._bg,
-                      anchor="w", justify="left", wraplength=400).pack(anchor="w", pady=(2,0))
+                      anchor="w", justify="left", wraplength=420).pack(anchor="w", pady=(2,0))
 
         from urllib.parse import urlparse as up
         domain = up(self.item.get("feed","")).netloc
         pub = self.item.get("published","")[:16]
-        meta = f"{pub}  •  {domain}" if domain else pub
+        meta = f"🕐 {pub}   🌐 {domain}" if domain else f"🕐 {pub}"
         tk.Label(tf, text=meta, font=F["meta"], fg=mc,
-                  bg=self._bg, anchor="w").pack(anchor="w", pady=(3,0))
-
-        if not seen:
-            tk.Label(self, text="●", fg=C["badge"], bg=self._bg,
-                      font=("",8)).pack(side="right", padx=8)
+                  bg=self._bg, anchor="w").pack(anchor="w", pady=(4,0))
 
         tk.Frame(self, height=1, bg=C["separator"]).pack(side="bottom", fill="x")
         for w in tf.winfo_children(): self._bw(w)
+        for w in badge_row.winfo_children(): self._bw(w)
 
     def _bw(self, w):
         w.bind("<Button-1>", self._clicked)
@@ -830,13 +890,20 @@ class RedditCard(tk.Frame):
         from urllib.parse import urlparse as up
         domain = up(self.item.get("feed","")).netloc
         if domain:
-            tk.Label(tag_row, text=domain, font=F["tag"],
+            tk.Label(tag_row, text=f"🌐 {domain}", font=F["tag"],
                       fg=C["tag_fg"], bg=C["tag_bg"],
-                      padx=5, pady=1).pack(side="left", padx=(0,4))
+                      padx=6, pady=2).pack(side="left", padx=(0,4))
         if self.item.get("video_url"):
-            tk.Label(tag_row, text="VIDEO", font=F["tag"],
-                      fg="white", bg=C["accent"],
-                      padx=5, pady=1).pack(side="left", padx=2)
+            vt = self.item.get("video_type","")
+            icon = "▶ YouTube" if vt=="youtube" else ("▶ Vimeo" if vt=="vimeo" else "▶ Video")
+            tk.Label(tag_row, text=icon, font=F["tag"],
+                      fg=C.get("tag_video_fg","#C4B5FD"),
+                      bg=C.get("tag_video","#7C3AED"),
+                      padx=6, pady=2).pack(side="left", padx=2)
+        if not bool(self.item.get("seen")):
+            tk.Label(tag_row, text="NEW", font=F["tag"],
+                      fg="white", bg=C.get("badge_new", C["badge"]),
+                      padx=6, pady=2).pack(side="left", padx=2)
 
         # title
         tk.Label(tf, text=self.item.get("title",""), font=F["title"],
@@ -1136,22 +1203,34 @@ class RSSApp:
 
     def _feed_row(self, text, url, pinned=False):
         is_active = url == self._active_feed
-        bg = C["accent"] if is_active else C["sidebar"]
+        bg = C.get("active_feed", C["accent"]) if is_active else C["sidebar"]
+
         row = tk.Frame(self._feed_inner, bg=bg)
         row.pack(fill="x")
+
+        # Active indicator bar
+        if is_active:
+            tk.Frame(row, width=3, bg=C["accent2"]).pack(side="left", fill="y")
+
         btn = tk.Button(row, text=text, font=F["btn"], bg=bg,
-                         fg=C["text_primary"], relief="flat",
-                         anchor="w", padx=10, pady=6,
+                         fg=C["text_primary"] if is_active else C["text_secondary"],
+                         relief="flat", anchor="w", padx=10, pady=7,
+                         activebackground=C["card_hover"],
+                         activeforeground=C["text_primary"],
                          command=lambda u=url: self._select_feed(u))
         btn.pack(side="left", fill="x", expand=True)
         btn.bind("<Enter>", lambda e,r=row,b=btn: (r.configure(bg=C["card_hover"]),
-                                                    b.configure(bg=C["card_hover"])))
-        btn.bind("<Leave>", lambda e,r=row,b=btn,bg=bg: (r.configure(bg=bg),
-                                                           b.configure(bg=bg)))
+                                                    b.configure(bg=C["card_hover"],
+                                                                 fg=C["text_primary"])))
+        btn.bind("<Leave>", lambda e,r=row,b=btn,bg=bg,ia=is_active: (
+            r.configure(bg=bg),
+            b.configure(bg=bg, fg=C["text_primary"] if ia else C["text_secondary"])))
+
         if url:
-            pt = "🔓" if pinned else "📌"
-            tk.Button(row, text=pt, font=("",8), bg=bg,
-                       fg=C["text_secondary"], relief="flat", padx=2,
+            pin_fg = C.get("pin_color", C["warning"]) if pinned else C["text_seen"]
+            pt = "📌" if pinned else "·"
+            tk.Button(row, text=pt, font=("",9), bg=bg,
+                       fg=pin_fg, relief="flat", padx=3,
                        command=lambda u=url,p=pinned: self._toggle_pin(u,p)
                        ).pack(side="right")
             tk.Button(row, text="✕", font=("",8), bg=bg,
@@ -1233,14 +1312,27 @@ class RSSApp:
         url = simpledialog.askstring(t("add_feed_title"), t("add_feed_prompt"),
                                       parent=self.root)
         if url and url.strip():
-            self.store.add_feed(url.strip())
+            url = url.strip()
+            self.store.add_feed(url)
+            # track in settings so it survives restart
+            added = self._settings.setdefault("added_feeds", [])
+            deleted = self._settings.setdefault("deleted_feeds", [])
+            if url not in added: added.append(url)
+            if url in deleted:   deleted.remove(url)
+            config.save_settings(self._settings)
             self._refresh_sidebar()
-            self._select_feed(url.strip())
+            self._select_feed(url)
 
     def _del_feed(self, url):
         if messagebox.askyesno(t("del_feed_title"), t("del_feed_confirm",url=url),
                                 parent=self.root):
             self.store.remove_feed(url)
+            # remember deletion so it won't be re-added on next start
+            deleted = self._settings.setdefault("deleted_feeds", [])
+            added   = self._settings.setdefault("added_feeds", [])
+            if url not in deleted: deleted.append(url)
+            if url in added:       added.remove(url)
+            config.save_settings(self._settings)
             if self._active_feed == url: self._active_feed = None
             self._refresh_sidebar(); self._reload()
 
@@ -1312,8 +1404,19 @@ class RSSApp:
     # ── Background ──
     def _start_bg(self):
         existing = {f["url"] for f in self.store.get_feeds()}
+        deleted  = set(self._settings.get("deleted_feeds", []))
+        added    = self._settings.get("added_feeds", [])
+
+        # Add default feeds — but skip ones the user explicitly deleted
         for url in config.DEFAULT_FEEDS:
-            if url not in existing: self.store.add_feed(url)
+            if url not in existing and url not in deleted:
+                self.store.add_feed(url)
+
+        # Re-add user-added feeds that may have been lost
+        for url in added:
+            if url not in existing and url not in deleted:
+                self.store.add_feed(url)
+
         self._refresh_sidebar()
         threading.Thread(target=self._initial_load, daemon=True).start()
         if config.CHECK_INTERVAL > 0:
