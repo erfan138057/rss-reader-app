@@ -1,37 +1,38 @@
-name: Build and Release
+name: Build and Release EXE
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-    
+
     - name: Install dependencies
       run: |
         pip install pyinstaller
         pip install -r requirements.txt
-    
+
     - name: Build with PyInstaller
       run: |
         pyinstaller --onefile --windowed --name "RSS-Reader-Pro" gui.py
-    
-    - name: Upload to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload EXE to Release
+      uses: svenstaro/upload-release-action@v2
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./dist/RSS-Reader-Pro.exe
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ./dist/RSS-Reader-Pro.exe
         asset_name: RSS-Reader-Pro-${{ github.ref_name }}.exe
-        asset_content_type: application/octet-stream
+        tag: ${{ github.ref_name }}
+        overwrite: true
