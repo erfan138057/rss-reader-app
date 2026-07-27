@@ -1,4 +1,4 @@
-name: Release Build
+name: Release
 
 on:
   push:
@@ -6,61 +6,76 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
-    
-    - name: Build executable
-      run: |
-        pyinstaller --onefile --windowed --name "rss-reader" gui.py
-    
-    - name: Create release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/rss-reader.exe
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
 
-  build-linux:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
-    
-    - name: Build executable
-      run: |
-        pyinstaller --onefile --name "rss-reader" gui.py
-    
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: rss-reader-linux
-        path: dist/rss-reader
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install httpx feedparser Pillow python-vlc pyinstaller
+
+      - name: Build EXE
+        run: |
+          python -m PyInstaller `
+            --onefile `
+            --windowed `
+            --name "RSS-Reader" `
+            --add-data "i18n.py;." `
+            gui.py
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-$(date +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rename EXE
+        shell: bash
+        run: |
+          mv dist/RSS-Reader.exe "dist/RSS-Reader-${{ steps.version.outputs.version }}-windows.exe"
+
+      - name: Upload artifact (always available)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RSS-Reader-windows-${{ steps.version.outputs.version }}
+          path: dist/RSS-Reader-*.exe
+
+      - name: Create GitHub Release (tag only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: RSS Reader ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: dist/RSS-Reader-*.exe
+          body: |
+            ## 📥 Download
+
+            | Platform | File |
+            |----------|------|
+            | Windows  | `RSS-Reader-${{ steps.version.outputs.version }}-windows.exe` |
+
+            ### How to run
+            1. Download the `.exe` file below
+            2. Double-click to run — no Python installation needed
+            3. All dependencies are bundled inside
+
+            > **First run:** Windows SmartScreen may appear.
+            > Click **"More info"** → **"Run anyway"**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
