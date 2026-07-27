@@ -150,112 +150,131 @@ def _label(parent, text, font_key="body", fg_key="text_primary", **kw):
 # Video Player Window
 # ---------------------------------------------------------------------------
 class VideoWindow(tk.Toplevel):
+    """
+    Multi-strategy video player:
+    1. VLC embedded (if libvlc is installed)
+    2. System default player (os.startfile / xdg-open)
+    3. Browser fallback (always works)
+    """
     def __init__(self, parent, video_url: str, video_type: str, title: str):
         super().__init__(parent)
         self.title(t("video_title"))
-        self.geometry("800x520")
+        self.geometry("820x540")
         self.configure(bg=C["bg"])
-        self._url = video_url
+        self._url  = video_url
         self._type = video_type
         self._player = None
+        self._vol  = 100
         self._build(title)
+
+    def _vlc_lib_ok(self) -> bool:
+        try:
+            inst = vlc.Instance()
+            return inst is not None
+        except Exception as e:
+            core.LOG.warning(f"libvlc not loadable: {e}")
+            return False
 
     def _build(self, title):
         hdr = tk.Frame(self, bg=C["sidebar"], pady=10)
         hdr.pack(fill="x")
         tk.Label(hdr, text=title[:80], font=F["btn"],
                   fg=C["text_primary"], bg=C["sidebar"]).pack(side="left", padx=14)
-
-        if self._type in ["direct", "redgifs"] and VLC_OK:
+        use_vlc = VLC_OK and self._vlc_lib_ok() and self._type in ("direct","redgifs")
+        if use_vlc:
+            core.LOG.info("Video: VLC embedded")
             self._build_vlc()
-        elif self._type == "youtube":
-            self._build_youtube()
-        elif self._type == "redgifs":
-            self._build_redgifs()
+        elif self._type in ("youtube","vimeo","redgifs"):
+            core.LOG.info(f"Video: online ({self._type}) → browser+system")
+            self._build_online()
         else:
-            self._build_fallback()
+            core.LOG.info("Video: system player")
+            self._build_system_ui()
+            self.after(200, self._open_system)
 
+    # ── VLC ──
     def _build_vlc(self):
         self._vlc_frame = tk.Frame(self, bg="black")
         self._vlc_frame.pack(fill="both", expand=True)
-
+        self._prog = ttk.Progressbar(self, mode="indeterminate")
+        self._prog.pack(fill="x")
         ctrl = tk.Frame(self, bg=C["sidebar"], pady=8)
         ctrl.pack(fill="x")
-        _btn(ctrl, "⏸ Pause/Play", self._toggle, bg=C["input_bg"],
-              fg=C["text_primary"]).pack(side="left", padx=8)
-        _btn(ctrl, "⏹ Stop", self._stop, bg=C["input_bg"],
-              fg=C["text_primary"]).pack(side="left", padx=4)
-        tk.Label(ctrl, text="🔈", font=F["meta"], bg=C["sidebar"],
-                  fg=C["text_secondary"]).pack(side="left", padx=(12,4))
-        _btn(ctrl, "−", lambda: self._volume(-10), bg=C["input_bg"],
-              fg=C["text_primary"], padx=6, pady=2).pack(side="left", padx=2)
-        _btn(ctrl, "＋", lambda: self._volume(10), bg=C["input_bg"],
-              fg=C["text_primary"], padx=6, pady=2).pack(side="left", padx=2)
-        _btn(ctrl, "🔗 Browser", lambda: webbrowser.open(self._url),
-              bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=8)
+        _btn(ctrl, "⏮-10s", lambda: self._seek(-10), bg=C["input_bg"], fg=C["text_primary"]).pack(side="left", padx=4)
+        _btn(ctrl, "⏸▶",   self._toggle,             bg=C["btn"],      fg="white"           ).pack(side="left", padx=4)
+        _btn(ctrl, "+10s⏭", lambda: self._seek(10),  bg=C["input_bg"], fg=C["text_primary"]).pack(side="left", padx=4)
+        tk.Label(ctrl, text="🔈", bg=C["sidebar"], fg=C["text_secondary"], font=F["meta"]).pack(side="left", padx=(10,2))
+        _btn(ctrl, "−", lambda: self._volume(-10), bg=C["input_bg"], fg=C["text_primary"], padx=6).pack(side="left", padx=1)
+        self._vol_lbl = tk.Label(ctrl, text="100%", font=F["meta"], fg=C["text_secondary"], bg=C["sidebar"], width=5)
+        self._vol_lbl.pack(side="left")
+        _btn(ctrl, "+", lambda: self._volume(10),  bg=C["input_bg"], fg=C["text_primary"], padx=6).pack(side="left", padx=1)
+        _btn(ctrl, "📂 System",  self._open_system,                  bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=4)
+        _btn(ctrl, "🌐 Browser", lambda: webbrowser.open(self._url), bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=4)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-        # Wait for window to fully render before embedding VLC
-        self.after(300, self._embed_vlc)
-
-    def _build_youtube(self):
-        # embed YouTube in a simple HTML view via browser fallback
-        vid_id = self._url.split("v=")[-1].split("&")[0]
-        inner = tk.Frame(self, bg=C["bg"])
-        inner.pack(fill="both", expand=True)
-        tk.Label(inner, text="▶", font=("Segoe UI", 48),
-                  fg=C["accent"], bg=C["bg"]).pack(pady=40)
-        tk.Label(inner, text="YouTube video", font=F["large"],
-                  fg=C["text_primary"], bg=C["bg"]).pack()
-        tk.Label(inner, text=self._url, font=F["meta"],
-                  fg=C["text_secondary"], bg=C["bg"]).pack(pady=8)
-        _btn(inner, "🔗 Open in browser", lambda: webbrowser.open(self._url)
-              ).pack(pady=12)
-
-    def _build_redgifs(self):
-        # Redgifs can be played directly via VLC, but we'll add a fallback UI
-        inner = tk.Frame(self, bg=C["bg"])
-        inner.pack(fill="both", expand=True)
-        tk.Label(inner, text="🎬", font=("Segoe UI", 48),
-                  fg=C["accent"], bg=C["bg"]).pack(pady=40)
-        tk.Label(inner, text="Redgifs video", font=F["large"],
-                  fg=C["text_primary"], bg=C["bg"]).pack()
-        tk.Label(inner, text=self._url, font=F["meta"],
-                  fg=C["text_secondary"], bg=C["bg"]).pack(pady=8)
-        _btn(inner, "🔗 Open in browser", lambda: webbrowser.open(self._url)
-              ).pack(pady=12)
-        # Try to play with VLC anyway
-        if VLC_OK:
-            self.after(500, lambda: self._build_vlc() if self.winfo_exists() else None)
-
-    def _build_fallback(self):
-        tk.Label(self, text=t("video_no_vlc"), font=F["body"],
-                  fg=C["warning"], bg=C["bg"]).pack(pady=20)
-        webbrowser.open(self._url)
-        self.after(2000, self.destroy)
+        self.after(400, self._embed_vlc)
 
     def _embed_vlc(self):
+        import sys
         try:
             self.update_idletasks()
-            instance = vlc.Instance("--no-xlib")
+            flags = [] if sys.platform.startswith("win") else ["--no-xlib"]
+            instance = vlc.Instance(*flags)
             self._player = instance.media_player_new()
-            media = instance.media_new(self._url)
-            self._player.set_media(media)
-            self._player.audio_set_volume(100)
+            self._player.set_media(instance.media_new(self._url))
+            self._player.audio_set_volume(self._vol)
+            self.update_idletasks()
             wid = self._vlc_frame.winfo_id()
-            import sys
-            if sys.platform.startswith("win"):
-                self._player.set_hwnd(wid)
-            elif sys.platform.startswith("darwin"):
-                self._player.set_nsobject(wid)
-            else:
-                self._player.set_xwindow(wid)
+            if sys.platform.startswith("win"):      self._player.set_hwnd(wid)
+            elif sys.platform.startswith("darwin"): self._player.set_nsobject(wid)
+            else:                                    self._player.set_xwindow(wid)
             self._player.play()
+            self._prog.start(15)
+            self.after(3000, lambda: self._prog.stop() if self.winfo_exists() else None)
             core.LOG.info(f"VLC playing: {self._url}")
         except Exception as e:
-            core.LOG.error(f"VLC embed error: {e}")
-            # fallback: open in browser
+            core.LOG.error(f"VLC embed failed: {e}")
+            if hasattr(self, "_prog"): self._prog.stop()
+            self._open_system()
+
+    # ── Online (YouTube/Vimeo/Redgifs) ──
+    def _build_online(self):
+        inner = tk.Frame(self, bg=C["bg"])
+        inner.pack(fill="both", expand=True)
+        tk.Label(inner, text="▶", font=("Segoe UI", 56), fg=C["accent"], bg=C["bg"]).pack(pady=30)
+        tk.Label(inner, text=f"{self._type.title()} Video", font=F["large"],
+                  fg=C["text_primary"], bg=C["bg"]).pack()
+        short = self._url[:72]+"…" if len(self._url)>72 else self._url
+        tk.Label(inner, text=short, font=F["meta"], fg=C["text_secondary"], bg=C["bg"]).pack(pady=6)
+        row = tk.Frame(inner, bg=C["bg"]); row.pack(pady=14)
+        _btn(row, "🌐 Open in Browser", lambda: webbrowser.open(self._url), bg=C["btn"]).pack(side="left", padx=8)
+        _btn(row, "📂 System Player",   self._open_system, bg=C["input_bg"], fg=C["text_primary"]).pack(side="left", padx=4)
+        self.after(150, lambda: webbrowser.open(self._url))
+
+    # ── System player ──
+    def _build_system_ui(self):
+        inner = tk.Frame(self, bg=C["bg"])
+        inner.pack(fill="both", expand=True)
+        tk.Label(inner, text="📽️", font=("Segoe UI", 48), bg=C["bg"]).pack(pady=24)
+        tk.Label(inner, text="Opening with system player…", font=F["large"],
+                  fg=C["text_primary"], bg=C["bg"]).pack()
+        short = self._url[:72]+"…" if len(self._url)>72 else self._url
+        tk.Label(inner, text=short, font=F["meta"], fg=C["text_secondary"], bg=C["bg"]).pack(pady=6)
+        row = tk.Frame(inner, bg=C["bg"]); row.pack(pady=14)
+        _btn(row, "📂 Open Again", self._open_system,             bg=C["btn"]).pack(side="left", padx=8)
+        _btn(row, "🌐 Browser",    lambda: webbrowser.open(self._url), bg=C["input_bg"], fg=C["text_primary"]).pack(side="left", padx=4)
+
+    def _open_system(self):
+        import sys, subprocess
+        try:
+            if sys.platform.startswith("win"):      os.startfile(self._url)
+            elif sys.platform.startswith("darwin"): subprocess.Popen(["open", self._url])
+            else:                                    subprocess.Popen(["xdg-open", self._url])
+            core.LOG.info(f"System player: {self._url}")
+        except Exception as e:
+            core.LOG.error(f"System player failed: {e}")
             webbrowser.open(self._url)
 
+    # ── Controls ──
     def _toggle(self):
         if self._player:
             if self._player.is_playing(): self._player.pause()
@@ -264,14 +283,20 @@ class VideoWindow(tk.Toplevel):
     def _stop(self):
         if self._player: self._player.stop()
 
-    def _volume(self, delta):
+    def _seek(self, seconds: int):
         if self._player:
-            current = self._player.audio_get_volume()
-            new_vol = max(0, min(100, current + delta))
-            self._player.audio_set_volume(new_vol)
+            self._player.set_time(max(0, self._player.get_time() + seconds * 1000))
+
+    def _volume(self, delta: int):
+        if self._player:
+            self._vol = max(0, min(200, self._vol + delta))
+            self._player.audio_set_volume(self._vol)
+            if hasattr(self, "_vol_lbl"): self._vol_lbl.configure(text=f"{self._vol}%")
 
     def _on_close(self):
-        if self._player: self._player.stop()
+        if self._player:
+            try: self._player.stop()
+            except: pass
         self.destroy()
 
 # ---------------------------------------------------------------------------
