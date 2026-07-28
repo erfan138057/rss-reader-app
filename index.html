@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Reader Pro - حرفه‌ای‌ترین اپلیکیشن RSS</title>
+    <meta name="description" content="اپلیکیشن دسکتاپ مدیریت خوراک RSS با قابلیت دور زدن فیلترینگ، پخش ویدیو و حریم خصوصی کامل">
+    <meta name="keywords" content="RSS, RSS Reader, DNS-over-HTTPS, Python, Tkinter, VLC, privacy, opensource">
+    <meta name="google-site-verification" content="[کد تأیید گوگل رو اینجا بذار]">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            color: #f0f6fc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            background: #1c2333;
+            padding: 50px 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            text-align: center;
+            border: 1px solid #30363d;
+        }
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #58a6ff, #f0883e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        .emoji-big {
+            font-size: 4rem;
+            -webkit-text-fill-color: initial;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #8b949e;
+            margin-bottom: 30px;
+        }
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 35px;
+        }
+        .badge {
+            background: #21262d;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 30px 0;
+            text-align: right;
+        }
+        .feature-item {
+            background: #0d1117;
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: 1px solid #21262d;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-item span {
+            font-size: 1.4rem;
+        }
+        .btn-download {
+            display: inline-block;
+            background: linear-gradient(135deg, #238636, #2ea043);
+            color: white;
+            padding: 16px 40px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border-radius: 40px;
+            text-decoration: none;
+            margin: 20px 0 15px;
+            transition: 0.3s;
+            border: none;
+            box-shadow: 0 4px 20px rgba(46, 160, 67, 0.3);
+        }
+        .btn-download:hover {
+            transform: scale(1.04);
+            background: linear-gradient(135deg, #2ea043, #3fb950);
+        }
+        .btn-secondary {
+            background: #21262d;
+            padding: 12px 28px;
+            border-radius: 30px;
+            color: #c9d1d9;
+            text-decoration: none;
+            margin: 0 8px;
+            display: inline-block;
+            font-size: 0.95rem;
+            border: 1px solid #30363d;
+        }
+        .btn-secondary:hover {
+            background: #30363d;
+        }
+        .footer-links {
+            margin-top: 35px;
+            border-top: 1px solid #21262d;
+            padding-top: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px;
+        }
+        .footer-links a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .features {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2.2rem;
+            }
+            .container {
+                padding: 30px 18px;
+            }
+        }
+        .lang-switch {
+            background: #21262d;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 20px;
+            border: 1px solid #30363d;
+        }
+        .lang-switch a {
+            color: #58a6ff;
+            text-decoration: none;
+            margin: 0 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-switch">
+            🇬🇧 <a href="README.md">English</a> | 🇮🇷 فارسی
+        </div>
+        
+        <div class="emoji-big">🎙️</div>
+        <h1>RSS Reader Pro</h1>
+        <p class="subtitle">حرفه‌ای‌ترین اپلیکیشن دسکتاپ مدیریت خوراک RSS با قابلیت دور زدن فیلترینگ</p>
+        
+        <div class="badges">
+            <span class="badge">🐍 Python 3.8+</span>
+            <span class="badge">🪟 Windows / Linux / macOS</span>
+            <span class="badge">📄 MIT License</span>
+            <span class="badge">⭐ 0 Stars</span>
+        </div>
+        
+        <a href="https://github.com/erfan138057/rss-reader-app/releases/latest/download/RSS-Reader-Pro-v1.0.1.exe" class="btn-download">
+            📥 دانلود نسخه ویندوز
+        </a>
+        <br>
+        <a href="https://github.com/erfan138057/rss-reader-app" class="btn-secondary">📂 مشاهده در گیت‌هاب</a>
+        <a href="https://github.com/erfan138057/rss-reader-app/releases" class="btn-secondary">📦 همه نسخه‌ها</a>
+        
+        <div class="features">
+            <div class="feature-item"><span>🔒</span> دور زدن فیلترینگ با DNS-over-HTTPS</div>
+            <div class="feature-item"><span>🎬</span> پخش ویدیوهای یوتیوب و Redgifs</div>
+            <div class="feature-item"><span>🎨</span> دو تم مختلف (ردیت و تلگرام)</div>
+            <div class="feature-item"><span>🛡️</span> حریم خصوصی کامل - ۱۰۰٪ محلی</div>
+            <div class="feature-item"><span>⚡</span> کش هوشمند برای سرعت بالا</div>
+            <div class="feature-item"><span>📱</span> حجم کم - فقط ۱۸ مگابایت</div>
+        </div>
+        
+        <div style="margin: 20px 0; color: #8b949e; font-size: 0.95rem;">
+            ⚡ نصب سریع: <code style="background:#0d1117;padding:4px 12px;border-radius:8px;">pip install -r requirements.txt && python gui.py</code>
+        </div>
+        
+        <div class="footer-links">
+            <a href="https://github.com/erfan138057/rss-reader-app/issues">🐛 گزارش باگ</a>
+            <a href="https://github.com/erfan138057/rss-reader-app/discussions">💬 بحث و گفتگو</a>
+            <a href="https://github.com/erfan138057/rss-reader-app/blob/main/LICENSE">📜 مجوز</a>
+            <a href="https://github.com/erfan138057/rss-reader-app">⭐ ستاره بدهید</a>
+        </div>
+        
+        <div style="margin-top: 30px; font-size: 0.8rem; color: #484f58;">
+            ساخته شده با ❤️ برای جامعه متن‌باز
+        </div>
+    </div>
+</body>
+</html>
