@@ -1,3 +1,9 @@
+<meta name="google-site-verification" content="jUdMhILMMS6nFdTtg00tQIXkAzidBCkM-dcPaSA-ZRo" />
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.1-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
+...
+  
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.1-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
