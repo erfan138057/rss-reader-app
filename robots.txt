@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://erfan138057.github.io/rss-reader-app/sitemap.xml
