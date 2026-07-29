@@ -305,12 +305,13 @@ class VideoWindow(tk.Toplevel):
 class DetailWindow(tk.Toplevel):
     LONG_THRESHOLD = 300
 
-    def __init__(self, parent, item: dict):
+    def __init__(self, parent, item: dict, store=None):
         super().__init__(parent)
         self.title(item.get("title","Article")[:60])
         self.geometry("740x580")
         self.configure(bg=C["bg"])
         self._item = item
+        self._store = store
         self._build()
 
     def _build(self):
@@ -369,8 +370,31 @@ class DetailWindow(tk.Toplevel):
         btn_row.pack(fill="x", padx=20)
         _btn(btn_row, t("open_browser"),
               lambda: webbrowser.open(item.get("link",""))).pack(side="left")
+
+        # Bookmark toggle
+        is_bm = bool(item.get("bookmarked"))
+        self._bm_btn = _btn(
+            btn_row,
+            t("bookmark_remove") if is_bm else t("bookmark_add"),
+            self._toggle_bookmark,
+            bg=C.get("warning","#F59E0B") if is_bm else C["input_bg"],
+            fg=C["bg"] if is_bm else C["text_primary"]
+        )
+        self._bm_btn.pack(side="left", padx=8)
+
         _btn(btn_row, t("close"), self.destroy,
               bg=C["input_bg"], fg=C["text_primary"]).pack(side="right")
+
+    def _toggle_bookmark(self):
+        if not self._store: return
+        new_state = self._store.toggle_bookmark(self._item["id"])
+        self._item["bookmarked"] = int(new_state)
+        if new_state:
+            self._bm_btn.configure(text=t("bookmark_remove"),
+                                    bg=C.get("warning","#F59E0B"), fg=C["bg"])
+        else:
+            self._bm_btn.configure(text=t("bookmark_add"),
+                                    bg=C["input_bg"], fg=C["text_primary"])
 
     def _load_hero(self):
         data = core.fetch_image_bytes(self._item["image_url"])
@@ -824,6 +848,18 @@ class NewsCard(tk.Frame):
         tk.Label(tf, text=meta, font=F["meta"], fg=mc,
                   bg=self._bg, anchor="w").pack(anchor="w", pady=(4,0))
 
+        # Bookmark button
+        is_bm = bool(self.item.get("bookmarked"))
+        bm_btn = tk.Button(
+            self, text="🔖",
+            font=("", 10), bg=self._bg,
+            fg=C.get("warning","#F59E0B") if is_bm else C["text_seen"],
+            relief="flat", padx=6, pady=4,
+            command=self._toggle_bookmark
+        )
+        bm_btn.pack(side="right", padx=(0,4), pady=4)
+        self._bm_btn = bm_btn
+
         tk.Frame(self, height=1, bg=C["separator"]).pack(side="bottom", fill="x")
         for w in tf.winfo_children(): self._bw(w)
         for w in badge_row.winfo_children(): self._bw(w)
@@ -837,7 +873,19 @@ class NewsCard(tk.Frame):
         self.bind("<Button-1>", self._clicked)
         self.bind("<Enter>",    lambda e: self._sbg(C["card_hover"]))
         self.bind("<Leave>",    lambda e: self._sbg(self._bg))
-        for w in self.winfo_children(): self._bw(w)
+        for w in self.winfo_children():
+            if w is not getattr(self, "_bm_btn", None):
+                self._bw(w)
+
+    def _toggle_bookmark(self):
+        if not hasattr(self, "_store"): return
+        new_state = self._store.toggle_bookmark(self.item["id"])
+        self.item["bookmarked"] = int(new_state)
+        self._bm_btn.configure(
+            fg=C.get("warning","#F59E0B") if new_state else C["text_seen"])
+
+    def set_store(self, store):
+        self._store = store
 
     def _sbg(self, color):
         self.configure(bg=color)
@@ -870,6 +918,16 @@ class NewsCard(tk.Frame):
         self._bg = C["card_seen"]; self._sbg(self._bg); self.item["seen"] = 1
         for w in self.winfo_children():
             if isinstance(w, tk.Label) and w.cget("text") == "●": w.destroy()
+
+    def update_bookmark_btn(self, is_bookmarked: bool):
+        """Update bookmark button appearance after toggle."""
+        for w in self.winfo_children():
+            if isinstance(w, tk.Button) and "🔖" in str(w.cget("text")):
+                w.configure(
+                    text="🔖" if is_bookmarked else "🔖",
+                    fg=C["warning"] if is_bookmarked else C["text_seen"]
+                )
+                break
 
 # ---------------------------------------------------------------------------
 # Reddit Card
@@ -1092,6 +1150,7 @@ class RSSApp:
             ("dns_scanner",  self._open_dns),
             ("add_feed",     self._add_feed),
             ("check_all",    self._check_all),
+            ("bookmarks",    self._show_bookmarks),
             ("log",          self._open_log),
             ("settings",     self._open_settings),
         ]:
@@ -1283,16 +1342,22 @@ class RSSApp:
         mode  = self._view_var.get() if hasattr(self,"_view_var") else "telegram"
         load_img = self._settings.get("load_images", True)
 
-        items = self.store.get_items(self._active_feed, sort=sort)
-        if not show: items = [i for i in items if not i.get("seen")]
-        if q:        items = [i for i in items if q in i.get("title","").lower()
-                               or q in i.get("summary","").lower()]
-
+        # Bookmarks view
+        if self._active_feed == "__bookmarks__":
+            items = self.store.get_bookmarks(sort=sort)
+            if q: items = [i for i in items if q in i.get("title","").lower()
+                            or q in i.get("summary","").lower()]
+        else:
+            items = self.store.get_items(self._active_feed, sort=sort)
+            if not show: items = [i for i in items if not i.get("seen")]
+            if q:        items = [i for i in items if q in i.get("title","").lower()
+                                   or q in i.get("summary","").lower()]
         for w in self._sf.inner.winfo_children(): w.destroy()
         self._cards = []
 
         if not items:
-            tk.Label(self._sf.inner, text=t("no_articles"), font=F["body"],
+            empty_msg = t("bookmark_empty") if self._active_feed == "__bookmarks__" else t("no_articles")
+            tk.Label(self._sf.inner, text=empty_msg, font=F["body"],
                       fg=C["text_secondary"], bg=C["bg"]).pack(pady=60)
         elif mode == "reddit":
             for i, item in enumerate(items, 1):
@@ -1306,6 +1371,7 @@ class RSSApp:
                 card = NewsCard(self._sf.inner, item,
                                  on_click=self._open_item,
                                  load_images=load_img)
+                card.set_store(self.store)
                 card.pack(fill="x")
                 self._cards.append(card)
 
@@ -1321,7 +1387,7 @@ class RSSApp:
             if hasattr(c,"item") and c.item.get("id")==item["id"]:
                 if hasattr(c,"mark_seen"): c.mark_seen()
                 break
-        DetailWindow(self.root, item)
+        DetailWindow(self.root, item, store=self.store)
         unseen = sum(1 for c in self._cards
                      if hasattr(c,"item") and not c.item.get("seen"))
         self._hdr_count.configure(
@@ -1382,6 +1448,13 @@ class RSSApp:
         self.root.after(0, lambda: self._set_status(t("fetched", n=len(items), url=url)))
 
     # ── DNS ──
+    def _show_bookmarks(self):
+        """Switch main view to bookmarks."""
+        self._active_feed = "__bookmarks__"
+        self._hdr_title.configure(text=t("bookmarks"))
+        self._refresh_sidebar()
+        self._reload()
+
     def _open_dns(self):
         DNSScannerWindow(self.root, self._apply_dns)
 

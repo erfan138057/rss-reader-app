@@ -258,7 +258,9 @@ class Store:
                 video_url   TEXT,
                 video_type  TEXT,
                 seen        INTEGER DEFAULT 0,
-                click_count INTEGER DEFAULT 0
+                click_count INTEGER DEFAULT 0,
+                bookmarked  INTEGER DEFAULT 0,
+                bookmarked_at TEXT
             );
             CREATE TABLE IF NOT EXISTS feeds (
                 url      TEXT PRIMARY KEY,
@@ -267,15 +269,24 @@ class Store:
                 added_at TEXT
             );
         """)
-        self.conn.commit()
+        # migrate existing DB — add columns if missing
+        for col, definition in [
+            ("bookmarked",    "INTEGER DEFAULT 0"),
+            ("bookmarked_at", "TEXT"),
+        ]:
+            try:
+                self.conn.execute(f"ALTER TABLE items ADD COLUMN {col} {definition}")
+                self.conn.commit()
+            except Exception:
+                pass
         LOG.info(f"DB opened: {db_file}")
 
     def upsert(self, item: dict, feed_url: str):
         with self._lock:
             self.conn.execute("""
                 INSERT INTO items
-                    (id,feed,title,link,published,summary,image_url,video_url,video_type,seen,click_count)
-                VALUES (:id,:feed,:title,:link,:published,:summary,:image_url,:video_url,:video_type,0,0)
+                    (id,feed,title,link,published,summary,image_url,video_url,video_type,seen,click_count,bookmarked)
+                VALUES (:id,:feed,:title,:link,:published,:summary,:image_url,:video_url,:video_type,0,0,0)
                 ON CONFLICT(id) DO UPDATE SET
                     title=excluded.title, summary=excluded.summary,
                     image_url=COALESCE(excluded.image_url, items.image_url),
@@ -289,6 +300,30 @@ class Store:
             self.conn.execute(
                 "UPDATE items SET seen=1, click_count=click_count+1 WHERE id=?", (item_id,))
             self.conn.commit()
+
+    def toggle_bookmark(self, item_id: str) -> bool:
+        """Toggle bookmark. Returns new state (True = bookmarked)."""
+        with self._lock:
+            cur = self.conn.execute("SELECT bookmarked FROM items WHERE id=?", (item_id,))
+            row = cur.fetchone()
+            if row is None:
+                return False
+            new_state = 0 if row[0] else 1
+            ts = datetime.now().isoformat() if new_state else None
+            self.conn.execute(
+                "UPDATE items SET bookmarked=?, bookmarked_at=? WHERE id=?",
+                (new_state, ts, item_id))
+            self.conn.commit()
+            LOG.info(f"Bookmark {'added' if new_state else 'removed'}: {item_id[:40]}")
+            return bool(new_state)
+
+    def get_bookmarks(self, sort="newest") -> list:
+        order = "bookmarked_at ASC" if sort == "oldest" else "bookmarked_at DESC"
+        with self._lock:
+            cur = self.conn.execute(
+                f"SELECT * FROM items WHERE bookmarked=1 ORDER BY {order}")
+            cols = [c[0] for c in cur.description]
+            return [dict(zip(cols, r)) for r in cur.fetchall()]
 
     def get_items(self, feed_url=None, sort="newest") -> list:
         order = "published ASC, rowid ASC" if sort == "oldest" else "published DESC, rowid DESC"

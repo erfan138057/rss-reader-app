@@ -93,6 +93,13 @@ STRINGS = {
         "play_video":       "▶ Play video",
         "video_title":      "Video Player",
         "video_no_vlc":     "VLC not found. Opening in browser...",
+        # Bookmarks
+        "bookmarks":        "🔖 Bookmarks",
+        "bookmark_add":     "🔖 Save",
+        "bookmark_remove":  "🔖 Saved",
+        "bookmark_empty":   "No bookmarks yet.\nClick 🔖 on any article to save it here.",
+        "bookmark_added":   "🔖 Bookmarked!",
+        "bookmark_removed": "Bookmark removed.",
     },
     "fa": {
         "app_title":        "RSS خوان",
@@ -172,6 +179,13 @@ STRINGS = {
         "play_video":       "▶ پخش ویدیو",
         "video_title":      "پخش‌کننده ویدیو",
         "video_no_vlc":     "VLC پیدا نشد. در مرورگر باز می‌شود...",
+        # Bookmarks
+        "bookmarks":        "🔖 نشان‌گذاری‌ها",
+        "bookmark_add":     "🔖 ذخیره",
+        "bookmark_remove":  "🔖 ذخیره شد",
+        "bookmark_empty":   "هنوز نشان‌گذاری ندارید.\nروی 🔖 هر خبر کلیک کنید.",
+        "bookmark_added":   "🔖 ذخیره شد!",
+        "bookmark_removed": "نشان‌گذاری حذف شد.",
     }
 }
 
