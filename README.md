@@ -2,11 +2,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.1-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
-...
-  
-<p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1-blue?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-orange?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/stars/erfan138057/rss-reader-app?style=for-the-badge" alt="Stars">
   <img src="https://img.shields.io/github/downloads/erfan138057/rss-reader-app/total?style=for-the-badge" alt="Downloads">
@@ -35,7 +30,7 @@
 ## ✨ Features
 
 - ⚡️ DNS-over-HTTPS Support - Bypass internet filters
-- 🎬 Redgifs & YouTube Video Playback
+- 🎬 YouTube Video Playback
 - 🎧 Audio Control in VLC player
 - 🌟 Dual UI Themes - Reddit-style & Telegram-style
 - ⚡️ Smart Caching for fast performance
@@ -57,163 +52,113 @@ git clone https://github.com/erfan138057/rss-reader-app.git
 cd rss-reader-app
 pip install -r requirements.txt
 python gui.py
-```
+Or Download EXE (Windows)
+https://img.shields.io/badge/%F0%9F%93%A5_Download_Windows-0078D4?style=for-the-badge&logo=windows
 
-### Or Download EXE (Windows)
+🎯 Perfect For
+Iranian Users - Bypass filters with DNS-over-HTTPS
 
-[![Download EXE](https://img.shields.io/badge/📥_Download_Windows-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest/download/RSS-Reader-Pro-v1.0.1.exe)
+Privacy Enthusiasts - 100% local operation
 
----
+Video Consumers - YouTube support
 
-## 🎯 Perfect For
+Python Developers - Clean, modular codebase
 
-- **Iranian Users** - Bypass filters with DNS-over-HTTPS
-- **Privacy Enthusiasts** - 100% local operation
-- **Video Consumers** - Redgifs + YouTube support
-- **Python Developers** - Clean, modular codebase
-- **RSS Power Users** - Advanced feed management
+RSS Power Users - Advanced feed management
 
----
+🛠️ Built With
+Python 3.8+ - Core language
 
-## 🛠️ Built With
+Tkinter - GUI framework
 
-- Python 3.8+ - Core language
-- Tkinter - GUI framework
-- VLC - Video playback via python-vlc
-- SQLite - Local data storage
-- Requests - HTTP client with DoH support
+VLC - Video playback via python-vlc
 
----
+SQLite - Local data storage
 
-## 🤝 Contributing
+Requests - HTTP client with DoH support
 
-1. Report Bugs - Open an issue
-2. Suggest Features - Share in Discussions
-3. Submit Code - Send pull requests
-4. Improve Docs - Help us make documentation better
+🤝 Contributing
+Report Bugs - Open an issue
 
----
+Suggest Features - Share in Discussions
 
-## 📜 License
+Submit Code - Send pull requests
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Improve Docs - Help us make documentation better
 
----
+📜 License
+MIT License - see LICENSE file for details.
 
 <div align="center">
-
-### ⭐ Star this project if you find it useful! ⭐
-
+⭐ Star this project if you find it useful! ⭐
 </div>
+<!-- ==================== DIVIDER ==================== --><p align="center"> <img src="https://img.shields.io/badge/─────────────────────────────────────────────-lightgrey?style=for-the-badge" alt="Divider"> </p><p align="center"> <img src="https://img.shields.io/badge/🇮🇷_نسخه_فارسی-006A4E?style=for-the-badge" alt="Persian Version"> </p>
+<!-- ==================== PERSIAN VERSION ==================== --><div dir="rtl" align="right">
+🎙️ آر‌اس‌اس‌خوان حرفه‌ای
+اپلیکیشن دسکتاپ حرفه‌ای مدیریت feed RSS با پشتیبانی از DNS-over-HTTPS
 
----
+<p align="center"> <a href="https://github.com/erfan138057/rss-reader-app/releases/latest"> <img src="https://img.shields.io/badge/📥_دانلود_آخرین_نسخه-0078D4?style=for-the-badge&logo=windows" alt="دانلود"> </a> <a href="https://github.com/erfan138057/rss-reader-app/discussions"> <img src="https://img.shields.io/badge/💬_گفتگو-2CA5E0?style=for-the-badge&logo=github" alt="گفتگو"> </a> <a href="https://github.com/erfan138057/rss-reader-app/issues"> <img src="https://img.shields.io/badge/🐛_گزارش_باگ-red?style=for-the-badge&logo=github" alt="گزارش باگ"> </a> </p>
+✨ ویژگی‌ها
+⚡️ پشتیبانی از DNS-over-HTTPS - دور زدن فیلترینگ
 
-<!-- ==================== DIVIDER ==================== -->
+🎬 پخش ویدیوهای یوتیوب
 
-<p align="center">
-  <img src="https://img.shields.io/badge/─────────────────────────────────────────────-lightgrey?style=for-the-badge" alt="Divider">
-</p>
+🎧 کنترل صدا در پخش‌کننده VLC
 
-<p align="center">
-  <img src="https://img.shields.io/badge/🇮🇷_نسخه_فارسی-006A4E?style=for-the-badge" alt="Persian Version">
-</p>
+🌟 دو تم مختلف - استایل ردیت و تلگرام
 
----
+⚡️ کش هوشمند برای عملکرد سریع
 
-<!-- ==================== PERSIAN VERSION ==================== -->
+🛡️ حریم خصوصی کامل - ۱۰۰٪ محلی، بدون ارسال داده به سرورهای خارجی
 
-<div dir="rtl" align="right">
+🔍 تشخیص خودکار محتوا (ویدیو و تصویر)
 
-# 🎙️ آر‌اس‌اس‌خوان حرفه‌ای
+🚀 شروع سریع
+پیش‌نیازها
+پایتون ۳.۸ یا بالاتر
 
-**اپلیکیشن دسکتاپ حرفه‌ای مدیریت Feed RSS با پشتیبانی از DNS-over-HTTPS**
+پخش‌کننده VLC (برای پخش ویدیو)
 
-<p align="center">
-  <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
-    <img src="https://img.shields.io/badge/📥_دانلود_آخرین_نسخه-0078D4?style=for-the-badge&logo=windows" alt="دانلود">
-  </a>
-  <a href="https://github.com/erfan138057/rss-reader-app/discussions">
-    <img src="https://img.shields.io/badge/💬_گفتگو-2CA5E0?style=for-the-badge&logo=github" alt="گفتگو">
-  </a>
-  <a href="https://github.com/erfan138057/rss-reader-app/issues">
-    <img src="https://img.shields.io/badge/🐛_گزارش_باگ-red?style=for-the-badge&logo=github" alt="گزارش باگ">
-  </a>
-</p>
-
----
-
-## ✨ ویژگی‌ها
-
-- ⚡️ پشتیبانی از DNS-over-HTTPS - دور زدن فیلترینگ
-- 🎬 پخش ویدیوهای Redgifs و یوتیوب
-- 🎧 کنترل صدا در پخش‌کننده VLC
-- 🌟 دو تم مختلف - استایل ردیت و تلگرام
-- ⚡️ کش هوشمند برای عملکرد سریع
-- 🛡️ حریم خصوصی کامل - ۱۰۰٪ محلی، بدون ارسال داده به سرورهای خارجی
-- 🔍 تشخیص خودکار محتوا (ویدیو و تصویر)
-
----
-
-## 🚀 شروع سریع
-
-### پیش‌نیازها
-- پایتون ۳.۸ یا بالاتر
-- پخش‌کننده VLC (برای پخش ویدیو)
-
-### نصب
-
-```bash
+نصب
+bash
 git clone https://github.com/erfan138057/rss-reader-app.git
 cd rss-reader-app
 pip install -r requirements.txt
 python gui.py
-```
+یا دانلود EXE (ویندوز)
+https://img.shields.io/badge/%F0%9F%93%A5_%D8%AF%D8%A7%D9%86%D9%84%D9%88%D8%AF_%D9%88%DB%8C%D9%86%D8%AF%D9%88%D8%B2-0078D4?style=for-the-badge&logo=windows
 
-### یا دانلود EXE (ویندوز)
+🎯 مناسب برای
+کاربران ایرانی - دور زدن فیلترینگ با DNS-over-HTTPS
 
-[![Download EXE](https://img.shields.io/badge/📥_دانلود_ویندوز-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest/download/RSS-Reader-Pro-v1.0.1.exe)
+علاقه‌مندان به حریم خصوصی - عملکرد ۱۰۰٪ محلی
 
----
+مصرف‌کنندگان ویدیو - پشتیبانی از یوتیوب
 
-## 🎯 مناسب برای
+توسعه‌دهندگان پایتون - کد تمیز و ماژولار
 
-- **کاربران ایرانی** - دور زدن فیلترینگ با DNS-over-HTTPS
-- **علاقه‌مندان به حریم خصوصی** - عملکرد ۱۰۰٪ محلی
-- **مصرف‌کنندگان ویدیو** - پشتیبانی از Redgifs و یوتیوب
-- **توسعه‌دهندگان پایتون** - کد تمیز و ماژولار
-- **کاربران حرفه‌ای RSS** - مدیریت پیشرفته خوراک‌ها
+کاربران حرفه‌ای RSS - مدیریت پیشرفته feedها
 
----
+🛠️ ساخته شده با
+پایتون ۳.۸+ - زبان اصلی
 
-## 🛠️ ساخته شده با
+Tkinter - چارچوب رابط کاربری
 
-- پایتون ۳.۸+ - زبان اصلی
-- Tkinter - چارچوب رابط کاربری
-- VLC - پخش ویدیو از طریق python-vlc
-- SQLite - ذخیره‌سازی محلی داده‌ها
-- Requests - کلاینت HTTP با پشتیبانی از DoH
+VLC - پخش ویدیو از طریق python-vlc
 
----
+SQLite - ذخیره‌سازی محلی داده‌ها
 
-## 🤝 مشارکت
+Requests - کلاینت HTTP با پشتیبانی از DoH
 
+🤝 مشارکت
 ۱. گزارش باگ - یک Issue باز کنید
 ۲. پیشنهاد ویژگی - در Discussions به اشتراک بگذارید
 ۳. ارسال کد - Pull Request بفرستید
 ۴. بهبود مستندات - به ما در بهتر کردن مستندات کمک کنید
 
----
-
-## 📜 مجوز
-
-مجوز MIT - برای جزئیات بیشتر فایل [LICENSE](LICENSE) را ببینید.
-
----
+📜 مجوز
+مجوز MIT - برای جزئیات بیشتر فایل LICENSE را ببینید.
 
 <div align="center">
-
-### ⭐ اگر این پروژه را مفید می‌دانید، به آن ستاره بدهید! ⭐
-
-</div>
-
-</div>
+⭐ اگر این پروژه را مفید می‌دانید، به آن ستاره بدهید! ⭐
+</div></div> ```
