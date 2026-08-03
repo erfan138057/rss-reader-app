@@ -1,22 +1,27 @@
 <meta name="google-site-verification" content="jUdMhILMMS6nFdTtg00tQIXkAzidBCkM-dcPaSA-ZRo" />
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.0.2-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-orange?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/stars/erfan138057/rss-reader-app?style=for-the-badge" alt="Stars">
   <img src="https://img.shields.io/github/downloads/erfan138057/rss-reader-app/total?style=for-the-badge" alt="Downloads">
 </p>
 
-<!-- ==================== ENGLISH VERSION ==================== -->
+---
 
-# 🎙️ RSS Reader Pro
+<!-- ENGLISH VERSION -->
 
-**Professional RSS Management Desktop App with DNS-over-HTTPS support**
+# 📡 RSS Reader Pro
+
+**Professional RSS Desktop App with DNS-over-HTTPS censorship bypass**
 
 <p align="center">
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
     <img src="https://img.shields.io/badge/📥_Download_Latest-0078D4?style=for-the-badge&logo=windows" alt="Download">
+  </a>
+  <a href="https://daramet.com/erfan138057">
+    <img src="https://img.shields.io/badge/💛_Support_Project-F5A623?style=for-the-badge" alt="Donate">
   </a>
   <a href="https://github.com/erfan138057/rss-reader-app/discussions">
     <img src="https://img.shields.io/badge/💬_Discussions-2CA5E0?style=for-the-badge&logo=github" alt="Discussions">
@@ -30,23 +35,30 @@
 
 ## ✨ Features
 
-- ⚡️ DNS-over-HTTPS Support - Bypass internet filters
-- 🎬 YouTube Video Playback
-- 🎧 Audio Control in VLC player
-- 🌟 Dual UI Themes - Reddit-style & Telegram-style
-- ⚡️ Smart Caching for fast performance
-- 🛡️ Privacy First - 100% local, no data sent to external servers
-- 🔍 Automatic content detection (videos & images)
+| Feature | Description |
+|---------|-------------|
+| 🔐 DNS-over-HTTPS | Bypass internet filters with DoH |
+| 🔖 Bookmarks | Save articles with one click |
+| 🎬 Video Playback | YouTube, Vimeo, direct MP4 support |
+| 🎨 Dual UI | Reddit-style & Telegram-style views |
+| 🌙 Dark / Light | Switchable themes |
+| ⚡ Smart Cache | Fast performance with local caching |
+| 🛡️ Privacy First | 100% local — no data sent anywhere |
+| 🔍 Auto Detection | Automatic video & image extraction |
+| 🗂️ Feed Manager | Add, remove, pin feeds |
+| 📋 App Log | Built-in log viewer for debugging |
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+
-- VLC Media Player (for video playback)
+### Download (Windows — No Install Needed)
 
-### Installation
+[![Download EXE](https://img.shields.io/badge/📥_Download_Windows_EXE-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest)
+
+> **Note:** On first run, Windows SmartScreen may appear. Click **More info** → **Run anyway**
+
+### Run from Source
 
 ```bash
 git clone https://github.com/erfan138057/rss-reader-app.git
@@ -55,44 +67,54 @@ pip install -r requirements.txt
 python gui.py
 ```
 
-### Or Download EXE (Windows)
-
-[![Download EXE](https://img.shields.io/badge/📥_Download_Windows-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest/download/RSS-Reader-Pro-v1.0.1.exe)
+**Requirements:** Python 3.8+ · VLC Media Player (optional, for video)
 
 ---
 
 ## 🎯 Perfect For
 
-- **Iranian Users** - Bypass filters with DNS-over-HTTPS
-- **Privacy Enthusiasts** - 100% local operation
-- **Video Consumers** - YouTube support
-- **Python Developers** - Clean, modular codebase
-- **RSS Power Users** - Advanced feed management
+- 🇮🇷 **Iranian users** — bypass DNS filtering out of the box
+- 🔒 **Privacy enthusiasts** — fully offline, zero telemetry
+- 📰 **News readers** — clean Reddit & Telegram style UI
+- 🎬 **Video consumers** — YouTube playback built in
+- 🐍 **Python developers** — clean modular codebase
 
 ---
 
 ## 🛠️ Built With
 
-- Python 3.8+ - Core language
-- Tkinter - GUI framework
-- VLC - Video playback via python-vlc
-- SQLite - Local data storage
-- Requests - HTTP client with DoH support
+- **Python 3.8+** — core language
+- **Tkinter** — GUI framework
+- **SQLite** — local data storage
+- **httpx** — HTTP client with DoH support
+- **feedparser** — RSS/Atom parsing
+- **Pillow** — image processing
+- **python-vlc** — video playback
+
+---
+
+## 💛 Support
+
+If RSS Reader Pro saved you time or helped you access free information, consider supporting the project:
+
+[![Support on Daramet](https://img.shields.io/badge/💛_Support_on_Daramet-F5A623?style=for-the-badge)](https://daramet.com/erfan138057)
+
+**USDT (BEP20):** `0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
 
 ---
 
 ## 🤝 Contributing
 
-1. Report Bugs - Open an issue
-2. Suggest Features - Share in Discussions
-3. Submit Code - Send pull requests
-4. Improve Docs - Help us make documentation better
+- 🐛 **Report bugs** — open an Issue
+- 💡 **Suggest features** — post in Discussions
+- 🔧 **Submit code** — send a Pull Request
+- 📖 **Improve docs** — every contribution helps
 
 ---
 
 ## 📜 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
@@ -104,35 +126,30 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-<!-- ==================== DIVIDER ==================== -->
+<!-- PERSIAN VERSION -->
 
 <p align="center">
-  <img src="https://img.shields.io/badge/─────────────────────────────────────────────-lightgrey?style=for-the-badge" alt="Divider">
+  <img src="https://img.shields.io/badge/🇮🇷_نسخه_فارسی-006A4E?style=for-the-badge" alt="Persian">
 </p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/🇮🇷_نسخه_فارسی-006A4E?style=for-the-badge" alt="Persian Version">
-</p>
-
----
-
-<!-- ==================== PERSIAN VERSION ==================== -->
 
 <div dir="rtl" align="right">
 
-# 🎙️ آر‌اس‌اس‌خوان حرفه‌ای
+# 📡 آر‌اس‌اس‌خوان حرفه‌ای
 
-**اپلیکیشن دسکتاپ حرفه‌ای مدیریت feed RSS با پشتیبانی از DNS-over-HTTPS**
+**اپلیکیشن دسکتاپ مدیریت فید RSS با دور زدن فیلترینگ**
 
 <p align="center">
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
     <img src="https://img.shields.io/badge/📥_دانلود_آخرین_نسخه-0078D4?style=for-the-badge&logo=windows" alt="دانلود">
   </a>
+  <a href="https://daramet.com/erfan138057">
+    <img src="https://img.shields.io/badge/💛_حمایت_از_پروژه-F5A623?style=for-the-badge" alt="دونیت">
+  </a>
   <a href="https://github.com/erfan138057/rss-reader-app/discussions">
     <img src="https://img.shields.io/badge/💬_گفتگو-2CA5E0?style=for-the-badge&logo=github" alt="گفتگو">
   </a>
   <a href="https://github.com/erfan138057/rss-reader-app/issues">
-    <img src="https://img.shields.io/badge/🐛_گزارش_باگ-red?style=for-the-badge&logo=github" alt="گزارش باگ">
+    <img src="https://img.shields.io/badge/🐛_گزارش_باگ-red?style=for-the-badge&logo=github" alt="باگ">
   </a>
 </p>
 
@@ -140,23 +157,30 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## ✨ ویژگی‌ها
 
-- ⚡️ پشتیبانی از DNS-over-HTTPS - دور زدن فیلترینگ
-- 🎬 پخش ویدیوهای یوتیوب
-- 🎧 کنترل صدا در پخش‌کننده VLC
-- 🌟 دو تم مختلف - استایل ردیت و تلگرام
-- ⚡️ کش هوشمند برای عملکرد سریع
-- 🛡️ حریم خصوصی کامل - ۱۰۰٪ محلی، بدون ارسال داده به سرورهای خارجی
-- 🔍 تشخیص خودکار محتوا (ویدیو و تصویر)
+| ویژگی | توضیح |
+|-------|-------|
+| 🔐 DNS-over-HTTPS | دور زدن فیلترینگ اینترنت |
+| 🔖 نشان‌گذاری | ذخیره مقالات با یک کلیک |
+| 🎬 پخش ویدیو | یوتیوب، ویمئو و MP4 مستقیم |
+| 🎨 دو رابط | نمای ردیت و تلگرام |
+| 🌙 دارک/لایت | تم تیره و روشن |
+| ⚡ کش هوشمند | سرعت بالا با ذخیره محلی |
+| 🛡️ حریم خصوصی | ۱۰۰٪ محلی، بدون ارسال داده |
+| 🔍 تشخیص خودکار | استخراج خودکار ویدیو و تصویر |
+| 🗂️ مدیریت فید | افزودن، حذف، پین کردن فیدها |
+| 📋 لاگ برنامه | مشاهده لاگ و خطاها |
 
 ---
 
 ## 🚀 شروع سریع
 
-### پیش‌نیازها
-- پایتون ۳.۸ یا بالاتر
-- پخش‌کننده VLC (برای پخش ویدیو)
+### دانلود (ویندوز — بدون نصب)
 
-### نصب
+[![دانلود EXE](https://img.shields.io/badge/📥_دانلود_ویندوز-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest)
+
+> **نکته:** در اولین اجرا ممکنه Windows SmartScreen نشون بده. روی **More info** → **Run anyway** کلیک کنید.
+
+### اجرا از سورس
 
 ```bash
 git clone https://github.com/erfan138057/rss-reader-app.git
@@ -165,57 +189,39 @@ pip install -r requirements.txt
 python gui.py
 ```
 
-### یا دانلود EXE (ویندوز)
-
-[![Download EXE](https://img.shields.io/badge/📥_دانلود_ویندوز-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest/download/RSS-Reader-Pro-v1.0.1.exe)
+**پیش‌نیازها:** Python 3.8+ · VLC (اختیاری، برای پخش ویدیو)
 
 ---
 
-## 🎯 مناسب برای
+## 💛 حمایت از پروژه
 
-- **کاربران ایرانی** - دور زدن فیلترینگ با DNS-over-HTTPS
-- **علاقه‌مندان به حریم خصوصی** - عملکرد ۱۰۰٪ محلی
-- **مصرف‌کنندگان ویدیو** - پشتیبانی از یوتیوب
-- **توسعه‌دهندگان پایتون** - کد تمیز و ماژولار
-- **کاربران حرفه‌ای RSS** - مدیریت پیشرفته feedها
+اگه این برنامه برات مفید بوده، میتونی از توسعه‌اش حمایت کنی:
 
----
+[![حمایت در دارامت](https://img.shields.io/badge/💛_حمایت_در_دارامت-F5A623?style=for-the-badge)](https://daramet.com/erfan138057)
 
-## 🛠️ ساخته شده با
-
-- پایتون ۳.۸+ - زبان اصلی
-- Tkinter - چارچوب رابط کاربری
-- VLC - پخش ویدیو از طریق python-vlc
-- SQLite - ذخیره‌سازی محلی داده‌ها
-- Requests - کلاینت HTTP با پشتیبانی از DoH
+**USDT (BEP20):** `0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
 
 ---
 
 ## 🤝 مشارکت
 
-۱. گزارش باگ - یک Issue باز کنید
-۲. پیشنهاد ویژگی - در Discussions به اشتراک بگذارید
-۳. ارسال کد - Pull Request بفرستید
-۴. بهبود مستندات - به ما در بهتر کردن مستندات کمک کنید
+- 🐛 **گزارش باگ** — یک Issue باز کنید
+- 💡 **پیشنهاد فیچر** — در Discussions بنویسید
+- 🔧 **ارسال کد** — Pull Request بفرستید
+- 📖 **بهبود مستندات** — هر کمکی ارزشمنده
 
 ---
 
 ## 📜 مجوز
 
-مجوز MIT - برای جزئیات بیشتر فایل [LICENSE](LICENSE) را ببینید.
+مجوز MIT — برای جزئیات فایل [LICENSE](LICENSE) را ببینید.
 
 ---
 
 <div align="center">
 
-### ⭐ اگر این پروژه را مفید می‌دانید، به آن ستاره بدهید! ⭐
+### ⭐ اگر این پروژه مفید بود، ستاره بدید! ⭐
 
 </div>
 
 </div>
-
-Donation
-
-If you find this project useful, you can support it via USDT (BEP20):
-
-`0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
