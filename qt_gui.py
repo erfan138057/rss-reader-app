@@ -33,12 +33,20 @@ from i18n import t, set_lang
 # Design system
 # ---------------------------------------------------------------------------
 C = {
-    "canvas": "#0B1320", "sidebar": "#0D1826", "surface": "#14243A",
-    "surface2": "#1A2E48", "card": "#182B45", "card_seen": "#121F31",
-    "line": "#28415F", "text": "#F3F7FC", "muted": "#91A7C0",
-    "dim": "#647B96", "teal": "#35D6C7", "teal_dark": "#1FAFA5",
-    "coral": "#FF6B64", "amber": "#F8C94A", "success": "#42D392",
+    # Signal Modular tint: inky midnight-blue planes, cobalt card depth and a
+    # restrained electric-teal accent, matching the approved visual reference.
+    "canvas": "#0F1A2A", "sidebar": "#0B1422", "surface": "#15263D",
+    "surface2": "#1B324E", "card": "#1C3551", "card_seen": "#14273D",
+    "line": "#2B496A", "text": "#F6F8FC", "muted": "#A3B5C9",
+    "dim": "#7087A1", "teal": "#2DDBC9", "teal_dark": "#1EAAA1",
+    "coral": "#FF655F", "amber": "#FFD05A", "success": "#45D49A",
 }
+UI_FONT_DELTA = 0
+
+
+def set_ui_font_size(size: int):
+    global UI_FONT_DELTA
+    UI_FONT_DELTA = max(-1, min(5, int(size) - 9))
 
 APP_QSS = f"""
 QMainWindow, QDialog {{ background: {C['canvas']}; color: {C['text']}; font-family: 'Segoe UI', Arial; }}
@@ -56,7 +64,7 @@ QPushButton#primary:hover {{ background: #5BE5D8; }}
 QPushButton#darkButton {{ background: {C['surface2']}; color: {C['text']}; }}
 QPushButton#activePill {{ background: {C['teal']}; color: #052127; border-radius: 7px; }}
 QPushButton#pill {{ background: {C['surface2']}; color: {C['muted']}; border-radius: 7px; }}
-QPushButton#pill:hover {{ color: {C['text']}; background: #23415F; }}
+QPushButton#pill:hover {{ color: {C['text']}; background: #264969; }}
 QPushButton#feed {{ text-align: left; border-radius: 7px; padding: 8px; }}
 QPushButton#feed:checked {{ background: #1B4858; color: {C['text']}; border-left: 3px solid {C['teal']}; }}
 QPushButton#moreTool {{ background: {C['surface2']}; color: {C['muted']}; }}
@@ -80,7 +88,7 @@ QTextBrowser {{ background: {C['surface']}; border: 0; padding: 14px; color: {C[
 
 def label(text: str, size: int = 11, color: str | None = None, bold: bool = False) -> QLabel:
     w = QLabel(text)
-    f = QFont("Segoe UI", size)
+    f = QFont("Segoe UI", max(7, size + UI_FONT_DELTA))
     f.setBold(bold)
     w.setFont(f)
     w.setStyleSheet(f"color: {color or C['text']}; background: transparent;")
@@ -192,7 +200,7 @@ class ImageLabel(QLabel):
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet(
             "border-radius: 8px; background: qlineargradient(x1:0,y1:0,x2:1,y2:1, "
-            "stop:0 #254365, stop:1 #15243A); color: #9CB2CB; font-size: 9px; font-weight: 700; letter-spacing: 1px;"
+            "stop:0 #294C70, stop:1 #172B44); color: #AABDD1; font-size: 9px; font-weight: 700; letter-spacing: 1px;"
         )
         self.setText(source_label[:28].upper() or "STORY")
 
@@ -234,7 +242,7 @@ class ArticleCard(QFrame):
         self.setStyleSheet(f"""
             QFrame#articleCard {{ background: {C['card_seen'] if item.get('seen') else C['card']};
                                 border: 1px solid {C['line']}; border-radius: 10px; }}
-            QFrame#articleCard:hover {{ background: #203B5A; border-color: {C['teal']}; }}
+            QFrame#articleCard:hover {{ background: #244363; border-color: {C['teal']}; }}
         """)
         self._build()
 
@@ -248,7 +256,9 @@ class ArticleCard(QFrame):
         self.image.setFixedHeight(image_h)
         layout.addWidget(self.image)
         image_url = self.item.get("image_url") or ""
-        self.image.load(image_url, self.item.get("link") or "")
+        app_settings = getattr(self.window(), "settings", {})
+        if app_settings.get("load_images", True):
+            self.image.load(image_url, self.item.get("link") or "")
 
         top = QHBoxLayout()
         domain = urlparse(self.item.get("feed", "")).netloc.upper() or "RSS READER"
@@ -403,29 +413,37 @@ class FilterDialog(QDialog):
 class SettingsDialog(QDialog):
     def __init__(self, settings: dict, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Settings")
-        self.resize(420, 330)
+        self.setWindowTitle(t("settings_title"))
+        self.resize(440, 390)
         self.settings = dict(settings)
         form = QFormLayout(self)
         self.language = QComboBox(); self.language.addItems(["English", "فارسی"])
         self.language.setCurrentIndex(1 if settings.get("language") == "fa" else 0)
-        self.theme = QComboBox(); self.theme.addItems(["Dark", "Light"])
-        self.theme.setCurrentIndex(1 if settings.get("theme") == "light" else 0)
+        # The Signal Modular product direction intentionally uses one curated
+        # dark tint rather than an unfinished light-mode variant.
+        self.theme = QLabel("Signal Midnight")
+        self.theme.setStyleSheet(f"color: {C['teal']}; font-weight: 600;")
         self.font_size = QComboBox(); self.font_size.addItems([str(v) for v in range(8, 17)])
         self.font_size.setCurrentText(str(settings.get("font_size", 9)))
-        self.images = QCheckBox("Load article images"); self.images.setChecked(settings.get("load_images", True))
-        self.notifications = QCheckBox("Notify when new articles arrive"); self.notifications.setChecked(settings.get("notifications", True))
+        self.images = QCheckBox(t("img_load_label")); self.images.setChecked(settings.get("load_images", True))
+        self.notifications = QCheckBox(t("notifications_label")); self.notifications.setChecked(settings.get("notifications", True))
         self.player = QLineEdit(settings.get("external_player_path", "")); self.player.setPlaceholderText("Optional custom media-player path")
-        form.addRow("Language", self.language); form.addRow("Theme", self.theme); form.addRow("Font size", self.font_size)
-        form.addRow(self.images); form.addRow(self.notifications); form.addRow("Player", self.player)
+        self.interval = QComboBox(); self.interval.addItems(["0", "60", "300", "900", "1800"])
+        self.interval.setCurrentText(str(settings.get("check_interval", config.CHECK_INTERVAL)))
+        self.scroll_speed = QComboBox(); self.scroll_speed.addItems([str(v) for v in range(1, 11)])
+        self.scroll_speed.setCurrentText(str(settings.get("auto_scroll_speed", 2)))
+        form.addRow(t("lang_label"), self.language); form.addRow(t("theme_label"), self.theme); form.addRow(t("font_size_label"), self.font_size)
+        form.addRow(t("interval_label"), self.interval); form.addRow(t("auto_scroll_speed"), self.scroll_speed)
+        form.addRow(self.images); form.addRow(self.notifications); form.addRow(t("video_player_path"), self.player)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept); buttons.rejected.connect(self.reject)
         form.addRow(buttons)
 
     def value(self) -> dict:
         out = dict(self.settings)
-        out.update({"language": "fa" if self.language.currentIndex() else "en", "theme": "light" if self.theme.currentIndex() else "dark",
-                    "font_size": int(self.font_size.currentText()), "load_images": self.images.isChecked(),
+        out.update({"language": "fa" if self.language.currentIndex() else "en", "theme": "dark",
+                    "font_size": int(self.font_size.currentText()), "check_interval": int(self.interval.currentText()),
+                    "auto_scroll_speed": int(self.scroll_speed.currentText()), "load_images": self.images.isChecked(),
                     "notifications": self.notifications.isChecked(), "external_player_path": self.player.text().strip()})
         return out
 
@@ -435,6 +453,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings = config.load_settings()
         set_lang(self.settings.get("language", "en"))
+        set_ui_font_size(self.settings.get("font_size", 9))
+        QApplication.instance().setLayoutDirection(Qt.RightToLeft if self.settings.get("language") == "fa" else Qt.LeftToRight)
         self.store = core.Store(config.DB_FILE)
         self.bridge = Bridge()
         self.bridge.refreshed.connect(self.on_refreshed)
@@ -461,6 +481,9 @@ class MainWindow(QMainWindow):
         self.scroll_timer.timeout.connect(self.auto_scroll_tick)
         if self.auto_scroll:
             self.scroll_timer.start(850)
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.timeout.connect(self.fetch_all_async)
+        self.configure_refresh_timer()
 
     def build_ui(self):
         root = QWidget(); root.setObjectName("root")
@@ -493,9 +516,9 @@ class MainWindow(QMainWindow):
         names = QVBoxLayout(); names.addWidget(label("RSS Reader", 15, C["text"], True)); names.addWidget(label("YOUR DAILY SIGNAL", 8, C["dim"], True)); brand.addLayout(names); brand.addStretch(1)
         theme = button("◐"); theme.clicked.connect(self.toggle_theme); brand.addWidget(theme)
         layout.addLayout(brand); layout.addSpacing(10)
-        self.all_btn = button("◉  All feeds", "feed", True); self.all_btn.clicked.connect(lambda: self.select_feed(None)); layout.addWidget(self.all_btn)
-        self.bookmarks_btn = button("▣  Bookmarks", "feed", True); self.bookmarks_btn.clicked.connect(self.show_bookmarks); layout.addWidget(self.bookmarks_btn)
-        quick = QHBoxLayout(); add = button("＋ Add feed", "primary"); add.clicked.connect(self.add_feed); quick.addWidget(add)
+        self.all_btn = button("◉  " + t("all_feeds"), "feed", True); self.all_btn.clicked.connect(lambda: self.select_feed(None)); layout.addWidget(self.all_btn)
+        self.bookmarks_btn = button("▣  " + t("bookmarks"), "feed", True); self.bookmarks_btn.clicked.connect(self.show_bookmarks); layout.addWidget(self.bookmarks_btn)
+        quick = QHBoxLayout(); add = button("＋ " + t("add_feed"), "primary"); add.clicked.connect(self.add_feed); quick.addWidget(add)
         refresh = button("↻", "darkButton"); refresh.setFixedWidth(38); refresh.clicked.connect(self.fetch_all_async); quick.addWidget(refresh)
         settings = button("⚙", "darkButton"); settings.setFixedWidth(38); settings.clicked.connect(self.open_settings); quick.addWidget(settings)
         layout.addLayout(quick); layout.addSpacing(8); layout.addWidget(label("FEED COLLECTIONS", 8, C["dim"], True))
@@ -512,22 +535,22 @@ class MainWindow(QMainWindow):
 
     def make_header(self):
         header = QFrame(); header.setObjectName("topBar"); layout = QHBoxLayout(header); layout.setContentsMargins(0, 0, 0, 10)
-        box = QVBoxLayout(); self.heading = label("All News", 18, C["text"], True); self.subheading = label("", 9, C["muted"]); box.addWidget(self.heading); box.addWidget(self.subheading); layout.addLayout(box); layout.addStretch(1)
-        self.auto_btn = button("□  Auto-scroll", "darkButton", True); self.auto_btn.clicked.connect(self.toggle_auto); layout.addWidget(self.auto_btn)
-        mark = button("✓  Mark all as read", "darkButton"); mark.clicked.connect(self.mark_all_read); layout.addWidget(mark)
+        box = QVBoxLayout(); self.heading = label(t("all_news"), 18, C["text"], True); self.subheading = label("", 9, C["muted"]); box.addWidget(self.heading); box.addWidget(self.subheading); layout.addLayout(box); layout.addStretch(1)
+        self.auto_btn = button("□  " + t("auto_scroll"), "darkButton", True); self.auto_btn.clicked.connect(self.toggle_auto); layout.addWidget(self.auto_btn)
+        mark = button("✓  " + t("mark_all_read"), "darkButton"); mark.clicked.connect(self.mark_all_read); layout.addWidget(mark)
         return header
 
     def make_search(self):
         bar = QFrame(); bar.setObjectName("searchBar"); row = QHBoxLayout(bar); row.setContentsMargins(12, 3, 8, 3); row.addWidget(label("⌕", 18, C["muted"]))
-        self.search = QLineEdit(); self.search.setPlaceholderText("Search stories, sources and topics"); self.search.textChanged.connect(self.refresh_view); row.addWidget(self.search, 1)
-        filters = button("Filters", "darkButton"); filters.clicked.connect(self.open_filters); row.addWidget(filters)
+        self.search = QLineEdit(); self.search.setPlaceholderText(t("search_placeholder")); self.search.textChanged.connect(self.refresh_view); row.addWidget(self.search, 1)
+        filters = button(t("advanced_search"), "darkButton"); filters.clicked.connect(self.open_filters); row.addWidget(filters)
         return bar
 
     def make_toolbar(self):
         bar = QWidget(); row = QHBoxLayout(bar); row.setContentsMargins(0, 0, 0, 0); row.setSpacing(7)
         self.all_stories = button("All stories", "activePill"); self.all_stories.clicked.connect(lambda: self.set_mode("all")); row.addWidget(self.all_stories)
         self.timeline = button("Timeline", "pill"); self.timeline.clicked.connect(lambda: self.set_mode("timeline")); row.addWidget(self.timeline)
-        self.show_read_btn = button("✓  Show read"); self.show_read_btn.setCheckable(True); self.show_read_btn.setChecked(self.show_read); self.show_read_btn.clicked.connect(self.toggle_show_read); row.addWidget(self.show_read_btn)
+        self.show_read_btn = button("✓  " + t("show_read")); self.show_read_btn.setCheckable(True); self.show_read_btn.setChecked(self.show_read); self.show_read_btn.clicked.connect(self.toggle_show_read); row.addWidget(self.show_read_btn)
         row.addStretch(1); row.addWidget(label("SORT", 8, C["dim"], True))
         self.sort_btn = button("Newest  ▾", "darkButton"); self.sort_btn.clicked.connect(self.sort_menu); row.addWidget(self.sort_btn)
         return bar
@@ -555,14 +578,14 @@ class MainWindow(QMainWindow):
 
     def select_feed(self, url):
         self.active_feed = url
-        self.heading.setText("All News" if url is None else urlparse(url).netloc)
+        self.heading.setText(t("all_news") if url is None else urlparse(url).netloc)
         self.bookmarks_btn.setChecked(False); self.all_btn.setChecked(url is None)
         self.refresh_all(); self.refresh_view()
         if url:
             self.fetch_feed_async(url)
 
     def show_bookmarks(self):
-        self.active_feed = "__bookmarks__"; self.heading.setText("Bookmarks"); self.bookmarks_btn.setChecked(True); self.all_btn.setChecked(False); self.refresh_all(); self.refresh_view()
+        self.active_feed = "__bookmarks__"; self.heading.setText(t("bookmarks")); self.bookmarks_btn.setChecked(True); self.all_btn.setChecked(False); self.refresh_all(); self.refresh_view()
 
     def refresh_all(self):
         self.refresh_sidebar(); self.refresh_view()
@@ -700,7 +723,7 @@ class MainWindow(QMainWindow):
         if dlg.exec(): self.filters = dlg.value(); self.refresh_view()
 
     def toggle_auto(self):
-        self.auto_scroll = self.auto_btn.isChecked(); self.auto_btn.setText(("✓  " if self.auto_scroll else "□  ") + "Auto-scroll"); self.settings["auto_scroll"] = self.auto_scroll; config.save_settings(self.settings)
+        self.auto_scroll = self.auto_btn.isChecked(); self.auto_btn.setText(("✓  " if self.auto_scroll else "□  ") + t("auto_scroll")); self.settings["auto_scroll"] = self.auto_scroll; config.save_settings(self.settings)
         if self.auto_scroll: self.scroll_timer.start(850)
         else: self.scroll_timer.stop()
 
@@ -756,13 +779,35 @@ class MainWindow(QMainWindow):
     def open_log(self):
         dlg = QDialog(self); dlg.setWindowTitle("App log"); dlg.resize(760, 480); layout = QVBoxLayout(dlg); out = QTextEdit(); out.setReadOnly(True); out.setPlainText("\n".join(core.LOG.get_lines())); layout.addWidget(out); dlg.exec()
 
+    def configure_refresh_timer(self):
+        self.refresh_timer.stop()
+        seconds = max(0, int(self.settings.get("check_interval", config.CHECK_INTERVAL) or 0))
+        if seconds:
+            self.refresh_timer.start(seconds * 1000)
+
+    def rebuild_ui(self):
+        active = self.active_feed
+        old_root = self.centralWidget()
+        self.build_ui()
+        if old_root is not None:
+            old_root.deleteLater()
+        self.active_feed = active
+        self.refresh_all()
+
     def open_settings(self):
         dlg = SettingsDialog(self.settings, self)
         if dlg.exec():
-            self.settings = dlg.value(); config.save_settings(self.settings); set_lang(self.settings.get("language", "en")); QMessageBox.information(self, "Settings", "Restart the app to apply language and theme changes.")
+            self.settings = dlg.value()
+            config.save_settings(self.settings)
+            set_lang(self.settings.get("language", "en"))
+            set_ui_font_size(self.settings.get("font_size", 9))
+            QApplication.instance().setLayoutDirection(Qt.RightToLeft if self.settings.get("language") == "fa" else Qt.LeftToRight)
+            self.configure_refresh_timer()
+            self.rebuild_ui()
+            self.set_status(t("saved"))
 
     def toggle_theme(self):
-        self.settings["theme"] = "light" if self.settings.get("theme") == "dark" else "dark"; config.save_settings(self.settings); QMessageBox.information(self, "Theme", "Restart the app to apply the selected theme.")
+        QMessageBox.information(self, "Signal Midnight", "Signal Midnight is the curated visual tint for this release.")
 
     def fetch_initial_async(self):
         def worker():
