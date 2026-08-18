@@ -14,6 +14,21 @@ import logging
 import sys
 from urllib.parse import urlparse
 from datetime import datetime
+from email.utils import parsedate_to_datetime
+from pathlib import Path
+from xml.etree import ElementTree as ET
+
+try:
+    from bs4 import BeautifulSoup
+    BS4_OK = True
+except ImportError:
+    BS4_OK = False
+
+try:
+    from plyer import notification
+    NOTIFICATIONS_OK = True
+except ImportError:
+    NOTIFICATIONS_OK = False
 
 import config
 
@@ -265,6 +280,7 @@ class Store:
             CREATE TABLE IF NOT EXISTS feeds (
                 url      TEXT PRIMARY KEY,
                 title    TEXT,
+                category TEXT DEFAULT 'عمومی',
                 pinned   INTEGER DEFAULT 0,
                 added_at TEXT
             );
@@ -277,12 +293,21 @@ class Store:
             try:
                 self.conn.execute(f"ALTER TABLE items ADD COLUMN {col} {definition}")
                 self.conn.commit()
-            except Exception:
+            except sqlite3.OperationalError:
                 pass
+        try:
+            self.conn.execute("ALTER TABLE feeds ADD COLUMN category TEXT DEFAULT 'عمومی'")
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass
         LOG.info(f"DB opened: {db_file}")
 
-    def upsert(self, item: dict, feed_url: str):
+    def upsert(self, item: dict, feed_url: str) -> bool:
+        """Insert or refresh an item and return whether it is newly discovered."""
         with self._lock:
+            is_new = self.conn.execute(
+                "SELECT 1 FROM items WHERE id=?", (item["id"],)
+            ).fetchone() is None
             self.conn.execute("""
                 INSERT INTO items
                     (id,feed,title,link,published,summary,image_url,video_url,video_type,seen,click_count,bookmarked)
@@ -294,6 +319,7 @@ class Store:
                     video_type=COALESCE(excluded.video_type, items.video_type)
             """, {**item, "feed": feed_url})
             self.conn.commit()
+        return is_new
 
     def mark_seen(self, item_id):
         with self._lock:
@@ -326,12 +352,61 @@ class Store:
             return [dict(zip(cols, r)) for r in cur.fetchall()]
 
     def get_items(self, feed_url=None, sort="newest") -> list:
-        order = "published ASC, rowid ASC" if sort == "oldest" else "published DESC, rowid DESC"
+        orders = {
+            "newest": "published DESC, rowid DESC",
+            "oldest": "published ASC, rowid ASC",
+            "popularity": "click_count DESC, published DESC, rowid DESC",
+        }
+        order = orders.get(sort, orders["newest"])
         with self._lock:
             q = f"SELECT * FROM items{' WHERE feed=?' if feed_url else ''} ORDER BY {order}"
             cur = self.conn.execute(q, (feed_url,) if feed_url else ())
             cols = [c[0] for c in cur.description]
             return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+    @staticmethod
+    def _matches_date(value: str, start_date: str = "", end_date: str = "") -> bool:
+        if not start_date and not end_date:
+            return True
+        try:
+            try:
+                moment = parsedate_to_datetime(value)
+            except (TypeError, ValueError, IndexError):
+                moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            date_value = moment.date().isoformat()
+            return (not start_date or date_value >= start_date) and (not end_date or date_value <= end_date)
+        except Exception:
+            return False
+
+    def search_items(self, query="", feed_url=None, sort="newest", unread_only=False,
+                     bookmarked_only=False, start_date="", end_date="") -> list:
+        """Return articles matching text, reading state, bookmark and date filters."""
+        query = (query or "").strip().casefold()
+        items = self.get_items(feed_url, sort)
+        return [item for item in items if
+                (not query or query in item.get("title", "").casefold()
+                 or query in item.get("summary", "").casefold())
+                and (not unread_only or not item.get("seen"))
+                and (not bookmarked_only or item.get("bookmarked"))
+                and self._matches_date(item.get("published", ""), start_date, end_date)]
+
+    def mark_all_seen(self, feed_url=None) -> int:
+        with self._lock:
+            statement = "UPDATE items SET seen=1 WHERE seen=0"
+            params = ()
+            if feed_url:
+                statement += " AND feed=?"
+                params = (feed_url,)
+            cur = self.conn.execute(statement, params)
+            self.conn.commit()
+        return cur.rowcount
+
+    def get_unread_counts(self) -> dict:
+        with self._lock:
+            cur = self.conn.execute(
+                "SELECT feed, COUNT(*) FROM items WHERE seen=0 GROUP BY feed"
+            )
+            return {feed: count for feed, count in cur.fetchall()}
 
     def update_image(self, item_id, image_url):
         with self._lock:
@@ -340,13 +415,29 @@ class Store:
                 (image_url, item_id))
             self.conn.commit()
 
-    def add_feed(self, url, title=""):
+    def add_feed(self, url, title="", category="عمومی"):
+        category = (category or "عمومی").strip()
         with self._lock:
-            self.conn.execute(
-                "INSERT OR IGNORE INTO feeds (url,title,pinned,added_at) VALUES (?,?,0,?)",
-                (url, title, datetime.now().isoformat()))
+            self.conn.execute("""
+                INSERT INTO feeds (url,title,category,pinned,added_at) VALUES (?,?,?,0,?)
+                ON CONFLICT(url) DO UPDATE SET
+                    title=CASE WHEN excluded.title<>'' THEN excluded.title ELSE feeds.title END,
+                    category=CASE WHEN excluded.category<>'' THEN excluded.category ELSE feeds.category END
+            """, (url, title, category, datetime.now().isoformat()))
             self.conn.commit()
-        LOG.info(f"Feed added: {url}")
+        LOG.info(f"Feed added: {url} ({category})")
+
+    def set_feed_category(self, url: str, category: str):
+        with self._lock:
+            self.conn.execute("UPDATE feeds SET category=? WHERE url=?", (category.strip() or "عمومی", url))
+            self.conn.commit()
+
+    def get_categories(self) -> list:
+        with self._lock:
+            cur = self.conn.execute(
+                "SELECT DISTINCT category FROM feeds WHERE category IS NOT NULL AND category<>'' ORDER BY category"
+            )
+            return [row[0] for row in cur.fetchall()]
 
     def remove_feed(self, url):
         with self._lock:
@@ -363,8 +454,125 @@ class Store:
     def get_feeds(self) -> list:
         with self._lock:
             cur = self.conn.execute(
-                "SELECT url,title,pinned FROM feeds ORDER BY pinned DESC, added_at ASC")
-            return [{"url": r[0], "title": r[1], "pinned": bool(r[2])} for r in cur.fetchall()]
+                "SELECT url,title,category,pinned FROM feeds ORDER BY category, pinned DESC, added_at ASC")
+            return [{"url": r[0], "title": r[1], "category": r[2] or "عمومی", "pinned": bool(r[3])}
+                    for r in cur.fetchall()]
+
+    def export_opml(self, path: str, app_title="RSS Reader Pro"):
+        root = ET.Element("opml", version="2.0")
+        head = ET.SubElement(root, "head")
+        ET.SubElement(head, "title").text = app_title
+        body = ET.SubElement(root, "body")
+        grouped = {}
+        for feed in self.get_feeds():
+            grouped.setdefault(feed["category"], []).append(feed)
+        for category, feeds in grouped.items():
+            folder = ET.SubElement(body, "outline", text=category, title=category)
+            for feed in feeds:
+                ET.SubElement(folder, "outline", text=feed["title"] or feed["url"],
+                              title=feed["title"] or feed["url"], type="rss",
+                              xmlUrl=feed["url"], category=category)
+        ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
+        LOG.info(f"OPML exported: {path}")
+
+    def import_opml(self, path: str) -> int:
+        tree = ET.parse(path)
+        root = tree.getroot()
+        imported = 0
+        for outline in root.findall(".//outline[@xmlUrl]"):
+            url = outline.get("xmlUrl", "").strip()
+            if not url:
+                continue
+            category = outline.get("category", "")
+            parent = next((p for p in root.findall(".//outline") if outline in list(p)), None)
+            if not category and parent is not None:
+                category = parent.get("title") or parent.get("text") or "عمومی"
+            self.add_feed(url, outline.get("title") or outline.get("text") or "", category or "عمومی")
+            imported += 1
+        LOG.info(f"OPML imported: {imported} feeds from {path}")
+        return imported
+
+    def export_bookmarks_html(self, path: str):
+        bookmarks = self.get_bookmarks()
+        rows = []
+        for item in bookmarks:
+            title = html.escape(item.get("title") or "بدون عنوان")
+            link = html.escape(item.get("link") or "")
+            summary = html.escape(item.get("summary") or "")
+            rows.append(f'<article><h2><a href="{link}">{title}</a></h2><p>{summary}</p><small>{html.escape(item.get("published") or "")}</small></article>')
+        document = """<!doctype html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\"><title>RSS Reader Pro Bookmarks</title><style>body{font-family:Tahoma,Arial;max-width:850px;margin:40px auto;line-height:1.8;color:#172033}article{padding:16px 0;border-bottom:1px solid #ddd}a{color:#1d4ed8;text-decoration:none}</style></head><body><h1>نشان‌گذاری‌های RSS Reader Pro</h1>""" + "\n".join(rows) + "</body></html>"
+        Path(path).write_text(document, encoding="utf-8")
+        LOG.info(f"Bookmarks exported as HTML: {path}")
+
+    def export_bookmarks_pdf(self, path: str):
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        except ImportError as exc:
+            raise RuntimeError("reportlab is required for PDF export") from exc
+        styles = getSampleStyleSheet()
+        story = [Paragraph("RSS Reader Pro — Bookmarks", styles["Title"]), Spacer(1, 12)]
+        for item in self.get_bookmarks():
+            story.append(Paragraph(html.escape(item.get("title") or "Untitled"), styles["Heading2"]))
+            story.append(Paragraph(html.escape(item.get("summary") or ""), styles["BodyText"]))
+            story.append(Paragraph(html.escape(item.get("link") or ""), styles["BodyText"]))
+            story.append(Spacer(1, 10))
+        SimpleDocTemplate(path, pagesize=A4).build(story)
+        LOG.info(f"Bookmarks exported as PDF: {path}")
+
+# ---------------------------------------------------------------------------
+# Reader mode and notifications
+# ---------------------------------------------------------------------------
+def fetch_reader_content(page_url: str, timeout=15) -> dict:
+    """Fetch an article and return a clean, readable title and body text."""
+    if not BS4_OK:
+        raise RuntimeError("beautifulsoup4 is required for Reader Mode")
+    try:
+        response = httpx.get(page_url, timeout=timeout,
+                             headers={"User-Agent": "Mozilla/5.0 (compatible; RSSReaderPro/1.0.3)"},
+                             follow_redirects=True)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        for node in soup(["script", "style", "noscript", "iframe", "nav", "footer", "header", "aside", "form"]):
+            node.decompose()
+        candidate = (soup.find("article") or soup.find("main") or
+                     soup.select_one("[role='main']") or soup.body)
+        if candidate is None:
+            raise ValueError("No readable content found")
+        title = (soup.find("meta", property="og:title") or soup.find("title"))
+        title_text = title.get("content", "") if title and title.has_attr("content") else (title.get_text(" ", strip=True) if title else "")
+        paragraphs = []
+        for node in candidate.find_all(["p", "h2", "h3", "li", "blockquote"]):
+            text = node.get_text(" ", strip=True)
+            if len(text) >= 25:
+                paragraphs.append(text)
+        body = "\n\n".join(paragraphs)
+        if len(body) < 80:
+            body = candidate.get_text("\n", strip=True)
+        if not body:
+            raise ValueError("Article body is empty")
+        return {"title": title_text or "Reader Mode", "text": body[:50000], "url": response.url}
+    except Exception as exc:
+        LOG.error(f"Reader Mode fetch failed {page_url}: {exc}")
+        raise
+
+
+def notify_new_items(feed_title: str, new_items: list):
+    """Show a native desktop notification when optional notification support exists."""
+    if not new_items:
+        return
+    headline = new_items[0].get("title", "خبر جدید")
+    message = headline if len(new_items) == 1 else f"{len(new_items)} خبر جدید — {headline}"
+    if NOTIFICATIONS_OK:
+        try:
+            notification.notify(title=f"{feed_title} — RSS Reader Pro", message=message[:220],
+                                app_name="RSS Reader Pro", timeout=8)
+            LOG.info(f"Notification shown for {feed_title}: {len(new_items)} new items")
+            return
+        except Exception as exc:
+            LOG.warning(f"Notification failed: {exc}")
+    LOG.info(f"New items in {feed_title}: {message}")
 
 # ---------------------------------------------------------------------------
 # Video detection helpers

@@ -25,10 +25,15 @@ ACTIVE_DOH     = DOH_SERVERS[0]
 CHECK_INTERVAL = 300
 
 DEFAULT_FEEDS = [
-    "https://feeds.bbci.co.uk/news/rss.xml",
-    "https://feeds.bbci.co.uk/persian/rss.xml",
-    "https://www.theguardian.com/world/rss",
-    "https://rss.cnn.com/rss/edition.rss",
+    # منابع فارسی عمومی و دسته‌بندی‌شده
+    ("https://feeds.bbci.co.uk/persian/rss.xml", "بی‌بی‌سی فارسی", "اخبار"),
+    ("https://www.irna.ir/rss", "ایرنا", "اخبار"),
+    ("https://www.isna.ir/rss", "ایسنا", "اخبار"),
+    ("https://www.mehrnews.com/rss", "مهر", "اخبار"),
+    ("https://www.tabnak.ir/fa/rss/allnews", "تابناک", "اخبار"),
+    # منابع بین‌المللی برای پوشش گسترده‌تر
+    ("https://feeds.bbci.co.uk/news/rss.xml", "BBC News", "World"),
+    ("https://www.theguardian.com/world/rss", "The Guardian", "World"),
 ]
 
 FILTER_TEST_SITES = [
@@ -49,6 +54,9 @@ DEFAULTS = {
     "card_style":     "telegram",
     "video_internal": True,
     "dns_auto":       False,
+    "notifications":  True,
+    "auto_scroll":    False,
+    "auto_scroll_speed": 2,
     "deleted_feeds":  [],   # feeds the user explicitly removed — never re-add
     "added_feeds":    [],   # feeds the user manually added — always re-add
 }

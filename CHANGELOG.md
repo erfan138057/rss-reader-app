@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-08-18
+
+### Added
+- Keyboard shortcuts for fast reading: `Space` scrolls the current list, `B` toggles the selected article bookmark, and `O` opens its source link.
+- Advanced article search with text, date-range, unread-only and bookmarked-only filters.
+- Per-feed unread counters in the sidebar, a one-click **Mark all as read** action, and popularity sorting based on click count.
+- Right-click card menu for bookmarking, copying a link, opening the source and launching Reader Mode.
+- Feed categories with category-aware sidebar grouping and improved default Persian news sources: BBC Persian, IRNA, ISNA, Mehr and Tabnak.
+- Reader Mode for extracting a clean, distraction-free article body from the original link.
+- Bookmark exports in HTML and PDF formats, plus OPML import/export for transferring feed subscriptions.
+- Optional desktop notifications for newly discovered articles, a font-size slider, and configurable auto-scroll.
+- Automated tests for categories, unread state, advanced search, popularity sorting, OPML transfer and bookmark HTML export.
+
+### Changed
+- Expanded the local SQLite schema with a backward-compatible feed category migration.
+- Extended settings persistence for notifications, auto-scroll speed and new sorting choices.
+- Updated runtime dependencies for Reader Mode, notifications and PDF export.
+
 ## [1.0.0] - 2025-01-01
 
 ### Added

@@ -1,7 +1,7 @@
 <meta name="google-site-verification" content="jUdMhILMMS6nFdTtg00tQIXkAzidBCkM-dcPaSA-ZRo" />
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.2-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.0.3-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-orange?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/stars/erfan138057/rss-reader-app?style=for-the-badge" alt="Stars">
@@ -15,6 +15,8 @@
 # 📡 RSS Reader Pro
 
 **Professional RSS Desktop App with DNS-over-HTTPS censorship bypass**
+
+> **v1.0.3 is here:** a faster reading workflow with advanced search, categories, Reader Mode, OPML transfer, bookmark exports, notifications and auto-scroll.
 
 <p align="center">
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
@@ -47,6 +49,12 @@
 | 🔍 Auto Detection | Automatic video & image extraction |
 | 🗂️ Feed Manager | Add, remove, pin feeds |
 | 📋 App Log | Built-in log viewer for debugging |
+| ⌨️ Keyboard shortcuts | `Space` scrolls, `B` bookmarks and `O` opens the active article |
+| 🔎 Advanced search | Filter by text, date, unread state and bookmarks |
+| 🗂️ Feed categories | Group feeds such as News, Tech and Sports; see unread counts per feed |
+| 📖 Reader Mode | Clean, distraction-free article text from the source page |
+| ⇄ OPML & exports | Import/export feeds via OPML and export bookmarks as HTML or PDF |
+| 🔔 Reading controls | Optional new-item notifications, font-size slider and auto-scroll |
 
 ---
 
@@ -138,6 +146,8 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 **اپلیکیشن دسکتاپ مدیریت فید RSS با دور زدن فیلترینگ**
 
+> **نسخهٔ ۱.۰.۳ منتشر شد:** تجربهٔ خواندن سریع‌تر با جست‌وجوی پیشرفته، دسته‌بندی، حالت مطالعه، انتقال OPML، خروجی نشان‌گذاری‌ها، اعلان و پیمایش خودکار.
+
 <p align="center">
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
     <img src="https://img.shields.io/badge/📥_دانلود_آخرین_نسخه-0078D4?style=for-the-badge&logo=windows" alt="دانلود">
@@ -169,6 +179,12 @@ MIT License — see [LICENSE](LICENSE) for details.
 | 🔍 تشخیص خودکار | استخراج خودکار ویدیو و تصویر |
 | 🗂️ مدیریت فید | افزودن، حذف، پین کردن فیدها |
 | 📋 لاگ برنامه | مشاهده لاگ و خطاها |
+| ⌨️ میانبرهای صفحه‌کلید | `Space` برای پیمایش، `B` برای نشان‌گذاری و `O` برای بازکردن خبر فعال |
+| 🔎 جست‌وجوی پیشرفته | فیلتر متن، بازهٔ تاریخ، فقط نخوانده و فقط نشان‌گذاری‌شده |
+| 🗂️ دسته‌بندی فید | گروه‌بندی فیدها مانند اخبار، فناوری و ورزش؛ همراه با شمارندهٔ نخوانده |
+| 📖 حالت مطالعه | نمایش متن تمیز و بدون اجزای مزاحم از صفحهٔ اصلی خبر |
+| ⇄ OPML و خروجی | ورود/خروج فیدها با OPML و خروجی HTML یا PDF از نشان‌گذاری‌ها |
+| 🔔 کنترل خواندن | اعلان خبرهای تازه، لغزندهٔ اندازهٔ فونت و پیمایش خودکار |
 
 ---
 

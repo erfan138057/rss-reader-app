@@ -4,4 +4,7 @@ feedparser>=6.0
 Pillow>=10.0       # برای نمایش تصویر
 python-vlc>=3.0    # برای پخش ویدیو با صدا
 pyinstaller>=6.0
+beautifulsoup4>=4.12  # برای Reader Mode
+plyer>=2.1            # برای اعلان‌های دسکتاپ
+reportlab>=4.0        # برای خروجی PDF نشان‌گذاری‌ها
 # tkinter داخل پایتون ویندوز هست - نیاز به pip نداره

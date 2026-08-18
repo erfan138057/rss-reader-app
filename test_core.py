@@ -1,103 +1,124 @@
 #!/usr/bin/env python3
-"""
-Simple tests for core functionality
-"""
-import sys
+"""Unit tests for RSS Reader Pro core functionality."""
 import os
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from core import *
+import core
 
-def test_detect_video():
-    """Test video detection functions."""
-    print("Testing video detection...")
-    
-    # Test YouTube
-    class MockEntry:
-        def __init__(self, link=None, summary=None):
-            self.link = link
-            self.summary = summary
-    
-    # Test YouTube detection
-    entry = MockEntry(link="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-    url, vtype = detect_video(entry)
-    assert "youtube.com/watch?v=dQw4w9WgXcQ" in url
-    assert vtype == "youtube"
-    print("✓ YouTube detection works")
-    
-    # Test Redgifs
-    entry = MockEntry(link="https://redgifs.com/watch/coolvideo123")
-    url, vtype = detect_video(entry)
-    assert "redgifs.com/watch/coolvideo123" in url
-    assert vtype == "redgifs"
-    print("✓ Redgifs detection works")
-    
-    # Test direct video
-    entry = MockEntry(link="https://example.com/video.mp4")
-    url, vtype = detect_video(entry)
-    assert url == "https://example.com/video.mp4"
-    assert vtype == "direct"
-    print("✓ Direct video detection works")
 
-def test_doh_resolve():
-    """Test DoH resolution (mock test)."""
-    print("Testing DoH resolution...")
-    
-    # Test IP detection
-    assert _is_ip("192.168.1.1") == True
-    assert _is_ip("google.com") == False
-    print("✓ IP detection works")
+class MockEntry:
+    def __init__(self, link=None, summary=None, media_thumbnail=None):
+        self.link = link
+        self.summary = summary
+        self.media_thumbnail = media_thumbnail
 
-def test_image_extraction():
-    """Test image extraction."""
-    print("Testing image extraction...")
-    
-    class MockEntry:
-        def __init__(self, media_thumbnail=None):
-            self.media_thumbnail = media_thumbnail
-    
-    # Test media thumbnail
-    entry = MockEntry(media_thumbnail=[{"url": "https://example.com/image.jpg"}])
-    image_url = extract_image_from_feed_entry(entry)
-    assert image_url == "https://example.com/image.jpg"
-    print("✓ Image extraction works")
 
-def test_cache():
-    """Test caching functionality."""
-    print("Testing cache...")
-    
-    # Clear cache first
-    clear_cache()
-    
-    # Mock feed data
-    test_data = [{"title": "Test Article"}]
-    cache_key = "test_url_20"
-    
-    # Add to cache
-    _feed_cache[cache_key] = (test_data, time.time())
-    
-    # Check cache
-    assert cache_key in _feed_cache
-    print("✓ Cache functionality works")
-    
-    # Clear cache
-    clear_cache()
-    assert len(_feed_cache) == 0
-    print("✓ Cache clearing works")
+def make_item(item_id, title="Test Article", published="2026-08-18T12:00:00", clicks=0):
+    return {
+        "id": item_id,
+        "title": title,
+        "link": f"https://example.test/{item_id}",
+        "summary": f"Summary for {title}",
+        "published": published,
+        "image_url": "",
+        "video_url": "",
+        "video_type": "",
+        "click_count": clicks,
+    }
+
+
+class CoreHelpersTests(unittest.TestCase):
+    def test_detect_video(self):
+        url, video_type = core.detect_video(MockEntry(link="https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
+        self.assertIn("youtube.com/watch?v=dQw4w9WgXcQ", url)
+        self.assertEqual(video_type, "youtube")
+
+        url, video_type = core.detect_video(MockEntry(link="https://redgifs.com/watch/coolvideo123"))
+        self.assertEqual(video_type, "redgifs")
+        self.assertIn("redgifs.com/watch/coolvideo123", url)
+
+        url, video_type = core.detect_video(MockEntry(link="https://example.com/video.mp4"))
+        self.assertEqual((url, video_type), ("https://example.com/video.mp4", "direct"))
+
+    def test_image_extraction_and_cache(self):
+        entry = MockEntry(media_thumbnail=[{"url": "https://example.com/image.jpg"}])
+        self.assertEqual(core.extract_image_from_feed_entry(entry), "https://example.com/image.jpg")
+        core.clear_cache()
+        core._feed_cache["test"] = ([{"title": "Test"}], core.time.time())
+        self.assertIn("test", core._feed_cache)
+        core.clear_cache()
+        self.assertFalse(core._feed_cache)
+
+    def test_ip_detection(self):
+        self.assertTrue(core._is_ip("192.168.1.1"))
+        self.assertFalse(core._is_ip("example.com"))
+
+
+class StoreTests(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.temp_dir.name, "reader.db")
+        self.store = core.Store(self.db_path)
+
+    def tearDown(self):
+        self.store.conn.close()
+        self.temp_dir.cleanup()
+
+    def test_categories_unread_and_mark_all_read(self):
+        self.store.add_feed("https://news.example/rss", "News", "اخبار")
+        self.store.add_feed("https://tech.example/rss", "Tech", "فناوری")
+        feeds = self.store.get_feeds()
+        self.assertEqual({feed["category"] for feed in feeds}, {"اخبار", "فناوری"})
+
+        self.assertTrue(self.store.upsert(make_item("article-1"), "https://news.example/rss"))
+        self.assertFalse(self.store.upsert(make_item("article-1", "Updated"), "https://news.example/rss"))
+        self.assertEqual(self.store.get_unread_counts(), {"https://news.example/rss": 1})
+        self.assertEqual(self.store.mark_all_seen("https://news.example/rss"), 1)
+        self.assertEqual(self.store.get_unread_counts(), {})
+
+    def test_advanced_search_and_popularity_sort(self):
+        feed = "https://news.example/rss"
+        self.store.add_feed(feed, "News", "اخبار")
+        self.store.upsert(make_item("article-1", "Python release", "2026-08-10T10:00:00"), feed)
+        self.store.upsert(make_item("article-2", "Sports update", "2026-08-12T10:00:00"), feed)
+        self.store.mark_seen("article-2")
+        self.store.mark_seen("article-2")
+        self.store.toggle_bookmark("article-1")
+
+        results = self.store.search_items("python", feed, bookmarked_only=True,
+                                          start_date="2026-08-01", end_date="2026-08-31")
+        self.assertEqual([item["id"] for item in results], ["article-1"])
+        self.assertEqual([item["id"] for item in self.store.get_items(feed, "popularity")][0], "article-2")
+
+    def test_opml_and_bookmark_html_export(self):
+        self.store.add_feed("https://news.example/rss", "News", "اخبار")
+        self.store.add_feed("https://tech.example/rss", "Tech", "فناوری")
+        self.store.upsert(make_item("article-1", "Saved news"), "https://news.example/rss")
+        self.store.toggle_bookmark("article-1")
+
+        opml_path = os.path.join(self.temp_dir.name, "feeds.opml")
+        html_path = os.path.join(self.temp_dir.name, "bookmarks.html")
+        pdf_path = os.path.join(self.temp_dir.name, "bookmarks.pdf")
+        self.store.export_opml(opml_path)
+        self.store.export_bookmarks_html(html_path)
+        self.store.export_bookmarks_pdf(pdf_path)
+        self.assertTrue(Path(opml_path).exists())
+        self.assertIn("https://news.example/rss", Path(opml_path).read_text(encoding="utf-8"))
+        self.assertIn("Saved news", Path(html_path).read_text(encoding="utf-8"))
+        self.assertTrue(Path(pdf_path).read_bytes().startswith(b"%PDF"))
+
+        imported = core.Store(os.path.join(self.temp_dir.name, "imported.db"))
+        try:
+            self.assertEqual(imported.import_opml(opml_path), 2)
+            self.assertEqual(len(imported.get_feeds()), 2)
+        finally:
+            imported.conn.close()
+
 
 if __name__ == "__main__":
-    print("Running core module tests...\n")
-    
-    try:
-        test_detect_video()
-        test_doh_resolve()
-        test_image_extraction()
-        test_cache()
-        
-        print("\n✅ All tests passed!")
-        
-    except Exception as e:
-        print(f"\n❌ Test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    unittest.main(verbosity=2)

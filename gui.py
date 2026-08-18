@@ -370,6 +370,8 @@ class DetailWindow(tk.Toplevel):
         btn_row.pack(fill="x", padx=20)
         _btn(btn_row, t("open_browser"),
               lambda: webbrowser.open(item.get("link",""))).pack(side="left")
+        _btn(btn_row, "Reader Mode", lambda: ReaderWindow(self, item),
+              bg=C["accent2"], fg=C["bg"]).pack(side="left", padx=8)
 
         # Bookmark toggle
         is_bm = bool(item.get("bookmarked"))
@@ -408,6 +410,59 @@ class DetailWindow(tk.Toplevel):
         lbl = tk.Label(self.hero, image=photo, bg=C["sidebar"])
         lbl.image = photo
         lbl.pack(fill="both", expand=True)
+
+# ---------------------------------------------------------------------------
+# Reader Mode Window
+# ---------------------------------------------------------------------------
+class ReaderWindow(tk.Toplevel):
+    """Display article text extracted from the original page in a distraction-free view."""
+    def __init__(self, parent, item: dict):
+        super().__init__(parent)
+        self.title("Reader Mode")
+        self.geometry("760x640")
+        self.configure(bg=C["bg"])
+        self._item = item
+        self._build()
+        threading.Thread(target=self._load, daemon=True).start()
+
+    def _build(self):
+        header = tk.Frame(self, bg=C["sidebar"], pady=10)
+        header.pack(fill="x")
+        self._title = tk.Label(header, text=self._item.get("title", "Reader Mode"),
+                               font=F["large"], fg=C["text_primary"], bg=C["sidebar"],
+                               wraplength=680, justify="left", anchor="w")
+        self._title.pack(fill="x", padx=16)
+        self._status = tk.Label(header, text="Loading clean article…", font=F["meta"],
+                                fg=C["text_secondary"], bg=C["sidebar"])
+        self._status.pack(anchor="w", padx=16, pady=(4, 0))
+        body = tk.Frame(self, bg=C["bg"])
+        body.pack(fill="both", expand=True, padx=16, pady=14)
+        self._text = tk.Text(body, font=F["body"], fg=C["text_primary"], bg=C["card"],
+                             relief="flat", wrap="word", padx=18, pady=16)
+        bar = ttk.Scrollbar(body, orient="vertical", command=self._text.yview)
+        self._text.configure(yscrollcommand=bar.set)
+        self._text.pack(side="left", fill="both", expand=True)
+        bar.pack(side="right", fill="y")
+        _btn(self, t("close"), self.destroy, bg=C["input_bg"],
+             fg=C["text_primary"]).pack(anchor="e", padx=16, pady=(0, 12))
+
+    def _load(self):
+        try:
+            content = core.fetch_reader_content(self._item.get("link", ""))
+            self.after(0, self._show_content, content)
+        except Exception as exc:
+            self.after(0, self._show_error, str(exc))
+
+    def _show_content(self, content):
+        self._title.configure(text=content.get("title") or self._item.get("title", "Reader Mode"))
+        self._status.configure(text=content.get("url", ""))
+        self._text.insert("1.0", content.get("text", ""))
+        self._text.config(state="disabled")
+
+    def _show_error(self, message):
+        self._status.configure(text="Unable to load Reader Mode")
+        self._text.insert("1.0", f"Reader Mode could not extract this article.\n\n{message}")
+        self._text.config(state="disabled")
 
 # ---------------------------------------------------------------------------
 # Settings Window
@@ -474,6 +529,10 @@ class SettingsWindow(tk.Toplevel):
             p, textvariable=self._interval_var, width=8,
             bg=C["input_bg"], fg=C["text_primary"],
             relief="flat", font=F["mono"]).pack(side="left", ipady=3))
+        self._notify_var = tk.BooleanVar(value=self._s.get("notifications", True))
+        self._row(g, t("notifications_label"), lambda p: tk.Checkbutton(
+            p, variable=self._notify_var, bg=C["bg"], selectcolor=C["input_bg"],
+            activebackground=C["bg"]).pack(side="left"))
 
         # ── Feeds ──
         fd = self._section(inner, t("section_feeds"))
@@ -481,7 +540,7 @@ class SettingsWindow(tk.Toplevel):
         self._sort_var = tk.StringVar(value=self._s.get("sort","newest"))
         self._row(fd, t("sort_label"), lambda p: ttk.Combobox(
             p, textvariable=self._sort_var,
-            values=[t("sort_newest"), t("sort_oldest")],
+            values=[t("sort_newest"), t("sort_oldest"), t("sort_popularity")],
             width=14, state="readonly").pack(side="left"))
 
         self._show_read_var = tk.BooleanVar(value=self._s.get("show_read", True))
@@ -493,11 +552,15 @@ class SettingsWindow(tk.Toplevel):
         # ── Display ──
         dp = self._section(inner, t("section_display"))
 
-        self._font_var = tk.StringVar(value=str(self._s.get("font_size",9)))
-        self._row(dp, t("font_size_label"), lambda p: ttk.Combobox(
-            p, textvariable=self._font_var,
-            values=["8","9","10","11","12"],
-            width=6, state="readonly").pack(side="left"))
+        self._font_var = tk.IntVar(value=int(self._s.get("font_size", 9)))
+        self._font_value = tk.StringVar(value=str(self._font_var.get()))
+        def make_font_slider(parent):
+            ttk.Scale(parent, from_=8, to=16, orient="horizontal", length=130,
+                      variable=self._font_var,
+                      command=lambda value: self._font_value.set(str(int(float(value))))).pack(side="left")
+            tk.Label(parent, textvariable=self._font_value, width=3, font=F["mono"],
+                     fg=C["text_primary"], bg=C["bg"]).pack(side="left", padx=6)
+        self._row(dp, t("font_size_label"), make_font_slider)
 
         self._card_var = tk.StringVar(value=self._s.get("card_style","telegram"))
         self._row(dp, t("card_style_label"), lambda p: ttk.Combobox(
@@ -510,6 +573,15 @@ class SettingsWindow(tk.Toplevel):
             p, variable=self._img_var,
             bg=C["bg"], selectcolor=C["input_bg"],
             activebackground=C["bg"]).pack(side="left"))
+        self._auto_scroll_var = tk.BooleanVar(value=self._s.get("auto_scroll", False))
+        self._row(dp, t("auto_scroll"), lambda p: tk.Checkbutton(
+            p, variable=self._auto_scroll_var,
+            bg=C["bg"], selectcolor=C["input_bg"],
+            activebackground=C["bg"]).pack(side="left"))
+        self._auto_scroll_speed_var = tk.IntVar(value=int(self._s.get("auto_scroll_speed", 2)))
+        self._row(dp, t("auto_scroll_speed"), lambda p: ttk.Scale(
+            p, from_=1, to=8, orient="horizontal", length=130,
+            variable=self._auto_scroll_speed_var).pack(side="left"))
 
         # ── Video ──
         vd = self._section(inner, t("section_video"))
@@ -539,7 +611,8 @@ class SettingsWindow(tk.Toplevel):
         theme_map = {t("theme_dark"): "dark", t("theme_light"): "light",
                      "dark": "dark", "light": "light"}
         sort_map  = {t("sort_newest"): "newest", t("sort_oldest"): "oldest",
-                     "newest": "newest", "oldest": "oldest"}
+                     t("sort_popularity"): "popularity", "newest": "newest",
+                     "oldest": "oldest", "popularity": "popularity"}
         self._s.update({
             "language":       self._lang_var.get(),
             "theme":          theme_map.get(self._theme_var.get(), "dark"),
@@ -549,6 +622,9 @@ class SettingsWindow(tk.Toplevel):
             "load_images":    self._img_var.get(),
             "font_size":      int(self._font_var.get() or 9),
             "card_style":     self._card_var.get(),
+            "notifications":  self._notify_var.get(),
+            "auto_scroll":    self._auto_scroll_var.get(),
+            "auto_scroll_speed": int(self._auto_scroll_speed_var.get() or 2),
             "video_internal": self._vid_int_var.get(),
             "dns_auto":       self._dns_auto_var.get(),
         })
@@ -785,12 +861,13 @@ class LogWindow(tk.Toplevel):
 class NewsCard(tk.Frame):
     TW, TH = 80, 60
 
-    def __init__(self, master, item, on_click, load_images=True, **kw):
+    def __init__(self, master, item, on_click, on_context=None, load_images=True, **kw):
         seen = bool(item.get("seen"))
         bg = C["card_seen"] if seen else C["card"]
         super().__init__(master, bg=bg, cursor="hand2", **kw)
         self.item = item
         self.on_click = on_click
+        self.on_context = on_context
         self._bg = bg
         self._photo = None
         self._load_images = load_images
@@ -866,11 +943,13 @@ class NewsCard(tk.Frame):
 
     def _bw(self, w):
         w.bind("<Button-1>", self._clicked)
+        w.bind("<Button-3>", self._context)
         w.bind("<Enter>",    lambda e: self._sbg(C["card_hover"]))
         w.bind("<Leave>",    lambda e: self._sbg(self._bg))
 
     def _bind_all(self):
         self.bind("<Button-1>", self._clicked)
+        self.bind("<Button-3>", self._context)
         self.bind("<Enter>",    lambda e: self._sbg(C["card_hover"]))
         self.bind("<Leave>",    lambda e: self._sbg(self._bg))
         for w in self.winfo_children():
@@ -894,6 +973,11 @@ class NewsCard(tk.Frame):
             except: pass
 
     def _clicked(self, e=None): self.on_click(self.item)
+
+    def _context(self, event):
+        if self.on_context:
+            self.on_context(event, self.item)
+            return "break"
 
     def _load_img_async(self):
         def worker():
@@ -935,11 +1019,12 @@ class NewsCard(tk.Frame):
 class RedditCard(tk.Frame):
     IW, IH = 160, 100
 
-    def __init__(self, master, item, index, on_click, load_images=True, **kw):
+    def __init__(self, master, item, index, on_click, on_context=None, load_images=True, **kw):
         bg = C["reddit_card"]
         super().__init__(master, bg=bg, cursor="hand2", **kw)
         self.item = item
         self.on_click = on_click
+        self.on_context = on_context
         self._bg = bg
         self._photo = None
         self._load_images = load_images
@@ -1011,11 +1096,13 @@ class RedditCard(tk.Frame):
 
     def _bw(self, w):
         w.bind("<Button-1>", self._clicked)
+        w.bind("<Button-3>", self._context)
         w.bind("<Enter>",    lambda e: self._sbg(C["card_hover"]))
         w.bind("<Leave>",    lambda e: self._sbg(self._bg))
 
     def _bind_all(self):
         self.bind("<Button-1>", self._clicked)
+        self.bind("<Button-3>", self._context)
         self.bind("<Enter>",    lambda e: self._sbg(C["card_hover"]))
         self.bind("<Leave>",    lambda e: self._sbg(self._bg))
         for w in self.winfo_children(): self._bw(w)
@@ -1027,6 +1114,11 @@ class RedditCard(tk.Frame):
             except: pass
 
     def _clicked(self, e=None): self.on_click(self.item)
+
+    def _context(self, event):
+        if self.on_context:
+            self.on_context(event, self.item)
+            return "break"
 
     def _load_img_async(self):
         def worker():
@@ -1081,6 +1173,11 @@ class RSSApp:
         self._view_mode   = self._settings.get("card_style","telegram")
         self._cards       = []
         self._sf          = None   # ScrollableFrame
+        self._focused_item = None
+        self._auto_scroll_job = None
+        self.root.bind_all("<space>", self._keyboard_shortcut)
+        self.root.bind_all("<Key-b>", self._keyboard_shortcut)
+        self.root.bind_all("<Key-o>", self._keyboard_shortcut)
 
         doh = config.ACTIVE_DOH
         core.install_doh_resolver(doh["ip"], doh["host"])
@@ -1130,6 +1227,8 @@ class RSSApp:
         self.main = tk.Frame(self.root, bg=C["bg"])
         self.main.pack(side="left", fill="both", expand=True)
         self._build_main()
+        if self._settings.get("auto_scroll", False):
+            self.root.after(500, self._schedule_auto_scroll)
 
     def _build_sidebar(self):
         # Logo + theme toggle
@@ -1150,7 +1249,11 @@ class RSSApp:
             ("dns_scanner",  self._open_dns),
             ("add_feed",     self._add_feed),
             ("check_all",    self._check_all),
+            ("mark_all_read", self._mark_all_read),
             ("bookmarks",    self._show_bookmarks),
+            ("import_opml",  self._import_opml),
+            ("export_opml",  self._export_opml),
+            ("export_bookmarks", self._export_bookmarks),
             ("log",          self._open_log),
             ("settings",     self._open_settings),
         ]:
@@ -1187,9 +1290,11 @@ class RSSApp:
 
     def _sb_btn(self, parent, text, cmd):
         icon_map = {"DNS Scanner":"🔍 ","Add Feed":"➕ ","Refresh All":"🔄 ",
-                    "App Log":"📋 ","Settings":"⚙️ ",
+                    "Mark all as read":"✓ ","Bookmarks":"🔖 ","Import OPML":"⇩ ",
+                    "Export OPML":"⇧ ","Export bookmarks":"⤓ ","App Log":"📋 ","Settings":"⚙️ ",
                     "اسکنر DNS":"🔍 ","افزودن فید":"➕ ","چک همه":"🔄 ",
-                    "لاگ برنامه":"📋 ","تنظیمات":"⚙️ "}
+                    "خواندن همه":"✓ ","نشان‌گذاری‌ها":"🔖 ","ورود OPML":"⇩ ",
+                    "خروجی OPML":"⇧ ","خروجی نشان‌گذاری‌ها":"⤓ ","لاگ برنامه":"📋 ","تنظیمات":"⚙️ "}
         display = icon_map.get(text, "") + text
         btn = tk.Button(parent, text=display, font=F["btn"],
                          bg=C["sidebar"], fg=C["text_primary"],
@@ -1236,12 +1341,21 @@ class RSSApp:
         self._sort_var = tk.StringVar(value=self._settings.get("sort","newest"))
         sf = tk.Frame(self._hdr, bg=C["sidebar"])
         sf.pack(side="right", padx=4)
-        for lbl, val in [(t("sort_newest"),"newest"),(t("sort_oldest"),"oldest")]:
+        for lbl, val in [(t("sort_newest"),"newest"),(t("sort_oldest"),"oldest"),(t("sort_popularity"),"popularity")]:
             tk.Radiobutton(sf, text=lbl, value=val, variable=self._sort_var,
                             font=F["meta"], fg=C["text_secondary"], bg=C["sidebar"],
                             selectcolor=C["accent"],
                             activebackground=C["sidebar"],
                             command=self._reload).pack(side="left", padx=2)
+
+        # Fast actions
+        _btn(self._hdr, t("mark_all_read"), self._mark_all_read,
+             bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=4)
+        self._auto_scroll_var = tk.BooleanVar(value=self._settings.get("auto_scroll", False))
+        tk.Checkbutton(self._hdr, text=t("auto_scroll"), variable=self._auto_scroll_var,
+                       command=self._toggle_auto_scroll, font=F["meta"], fg=C["text_secondary"],
+                       bg=C["sidebar"], selectcolor=C["input_bg"],
+                       activebackground=C["sidebar"]).pack(side="right", padx=5)
 
         # Search
         sr = tk.Frame(self.main, bg=C["panel"], pady=5)
@@ -1254,6 +1368,29 @@ class RSSApp:
                   bg=C["input_bg"], fg=C["text_primary"], relief="flat",
                   insertbackground=C["text_primary"]).pack(
             side="left", fill="x", expand=True, padx=(0,12), ipady=4)
+
+        # Advanced search filters
+        filters = tk.Frame(self.main, bg=C["panel"], pady=4)
+        filters.pack(fill="x")
+        tk.Label(filters, text=t("advanced_search"), font=F["meta"], fg=C["text_secondary"],
+                 bg=C["panel"]).pack(side="left", padx=(12, 6))
+        self._unread_only_var = tk.BooleanVar(value=False)
+        self._bookmarked_only_var = tk.BooleanVar(value=False)
+        for label, variable in [(t("unread_only"), self._unread_only_var),
+                                (t("bookmarked_only"), self._bookmarked_only_var)]:
+            tk.Checkbutton(filters, text=label, variable=variable, command=self._reload,
+                           font=F["meta"], fg=C["text_secondary"], bg=C["panel"],
+                           selectcolor=C["input_bg"], activebackground=C["panel"]).pack(side="left", padx=4)
+        self._from_date_var = tk.StringVar()
+        self._to_date_var = tk.StringVar()
+        for label, variable in [(t("from_date"), self._from_date_var), (t("to_date"), self._to_date_var)]:
+            entry = tk.Entry(filters, textvariable=variable, width=14, font=F["meta"],
+                             bg=C["input_bg"], fg=C["text_primary"], relief="flat",
+                             insertbackground=C["text_primary"])
+            entry.insert(0, "")
+            entry.pack(side="left", padx=4, ipady=3)
+            tk.Label(filters, text=label, font=F["meta"], fg=C["text_seen"], bg=C["panel"]).pack(side="left")
+            variable.trace_add("write", lambda *args: self._reload())
 
         # Content
         self._content = tk.Frame(self.main, bg=C["bg"])
@@ -1279,11 +1416,20 @@ class RSSApp:
     def _refresh_sidebar(self):
         for w in self._feed_inner.winfo_children(): w.destroy()
         self._feed_row(t("all_feeds"), None)
-        for f in self.store.get_feeds():
-            from urllib.parse import urlparse as up
-            domain = up(f["url"]).netloc or f["url"][:26]
-            prefix = "📌 " if f["pinned"] else "  "
-            self._feed_row(prefix + domain, f["url"], f["pinned"])
+        unread_counts = self.store.get_unread_counts()
+        grouped = {}
+        for feed in self.store.get_feeds():
+            grouped.setdefault(feed.get("category") or "عمومی", []).append(feed)
+        for category, feeds in grouped.items():
+            tk.Label(self._feed_inner, text=category.upper(), font=F["meta"],
+                     fg=C["accent2"], bg=C["sidebar"]).pack(anchor="w", padx=14, pady=(9, 2))
+            for f in feeds:
+                from urllib.parse import urlparse as up
+                domain = f.get("title") or up(f["url"]).netloc or f["url"][:26]
+                prefix = "📌 " if f["pinned"] else "  "
+                count = unread_counts.get(f["url"], 0)
+                suffix = f"  ({count})" if count else ""
+                self._feed_row(prefix + domain + suffix, f["url"], f["pinned"])
 
     def _feed_row(self, text, url, pinned=False):
         is_active = url == self._active_feed
@@ -1336,22 +1482,22 @@ class RSSApp:
     # ── Cards ──
     def _reload(self):
         if not hasattr(self, "_sf") or self._sf is None: return
-        q     = self._search_var.get().strip().lower() if hasattr(self,"_search_var") else ""
-        show  = self._show_read_var.get() if hasattr(self,"_show_read_var") else True
-        sort  = self._sort_var.get() if hasattr(self,"_sort_var") else "newest"
-        mode  = self._view_var.get() if hasattr(self,"_view_var") else "telegram"
+        q = self._search_var.get() if hasattr(self, "_search_var") else ""
+        show = self._show_read_var.get() if hasattr(self, "_show_read_var") else True
+        sort = self._sort_var.get() if hasattr(self, "_sort_var") else "newest"
+        mode = self._view_var.get() if hasattr(self, "_view_var") else "telegram"
+        unread_only = (not show) or (self._unread_only_var.get() if hasattr(self, "_unread_only_var") else False)
+        bookmarked_only = self._bookmarked_only_var.get() if hasattr(self, "_bookmarked_only_var") else False
+        start_date = self._from_date_var.get().strip() if hasattr(self, "_from_date_var") else ""
+        end_date = self._to_date_var.get().strip() if hasattr(self, "_to_date_var") else ""
         load_img = self._settings.get("load_images", True)
 
-        # Bookmarks view
+        # Bookmarks view remains compatible with all sorting options.
         if self._active_feed == "__bookmarks__":
-            items = self.store.get_bookmarks(sort=sort)
-            if q: items = [i for i in items if q in i.get("title","").lower()
-                            or q in i.get("summary","").lower()]
+            items = self.store.search_items(q, None, sort, unread_only, True, start_date, end_date)
         else:
-            items = self.store.get_items(self._active_feed, sort=sort)
-            if not show: items = [i for i in items if not i.get("seen")]
-            if q:        items = [i for i in items if q in i.get("title","").lower()
-                                   or q in i.get("summary","").lower()]
+            items = self.store.search_items(q, self._active_feed, sort, unread_only,
+                                            bookmarked_only, start_date, end_date)
         for w in self._sf.inner.winfo_children(): w.destroy()
         self._cards = []
 
@@ -1362,14 +1508,14 @@ class RSSApp:
         elif mode == "reddit":
             for i, item in enumerate(items, 1):
                 card = RedditCard(self._sf.inner, item, i,
-                                   on_click=self._open_item,
+                                   on_click=self._open_item, on_context=self._show_card_menu,
                                    load_images=load_img)
                 card.pack(fill="x", padx=4, pady=2)
                 self._cards.append(card)
         else:
             for item in items:
                 card = NewsCard(self._sf.inner, item,
-                                 on_click=self._open_item,
+                                 on_click=self._open_item, on_context=self._show_card_menu,
                                  load_images=load_img)
                 card.set_store(self.store)
                 card.pack(fill="x")
@@ -1382,6 +1528,7 @@ class RSSApp:
             else t("n_articles", n=total))
 
     def _open_item(self, item):
+        self._focused_item = item
         self.store.mark_seen(item["id"]); item["seen"] = 1
         for c in self._cards:
             if hasattr(c,"item") and c.item.get("id")==item["id"]:
@@ -1394,6 +1541,66 @@ class RSSApp:
             text=t("unread_of", unread=unseen, total=len(self._cards)) if unseen
             else t("n_articles", n=len(self._cards)))
 
+    def _show_card_menu(self, event, item):
+        self._focused_item = item
+        menu = tk.Menu(self.root, tearoff=0, bg=C["card"], fg=C["text_primary"],
+                       activebackground=C["accent"], activeforeground="white")
+        is_bookmarked = bool(item.get("bookmarked"))
+        menu.add_command(label=t("bookmark_remove") if is_bookmarked else t("bookmark_add"),
+                         command=lambda: self._toggle_item_bookmark(item))
+        menu.add_command(label=t("copy_link"), command=lambda: self._copy_link(item.get("link", "")))
+        menu.add_command(label=t("open_link"), command=lambda: webbrowser.open(item.get("link", "")))
+        menu.add_command(label=t("reader_mode"), command=lambda: ReaderWindow(self.root, item))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _copy_link(self, url):
+        if not url:
+            return
+        self.root.clipboard_clear()
+        self.root.clipboard_append(url)
+        self._set_status(t("copy_link"))
+
+    def _toggle_item_bookmark(self, item):
+        new_state = self.store.toggle_bookmark(item["id"])
+        item["bookmarked"] = int(new_state)
+        self._reload()
+
+    def _keyboard_shortcut(self, event):
+        if isinstance(event.widget, (tk.Entry, tk.Text)):
+            return
+        key = event.keysym.lower()
+        if key == "space" and self._sf:
+            self._sf.canvas.yview_scroll(6, "units")
+            return "break"
+        if key == "b" and self._focused_item:
+            self._toggle_item_bookmark(self._focused_item)
+            return "break"
+        if key == "o" and self._focused_item:
+            webbrowser.open(self._focused_item.get("link", ""))
+            return "break"
+
+    def _toggle_auto_scroll(self):
+        self._settings["auto_scroll"] = self._auto_scroll_var.get()
+        config.save_settings(self._settings)
+        if self._auto_scroll_var.get():
+            self._schedule_auto_scroll()
+        self._set_status(t("auto_scroll"))
+
+    def _schedule_auto_scroll(self):
+        if self._auto_scroll_job is not None:
+            return
+        def tick():
+            self._auto_scroll_job = None
+            if not getattr(self, "_auto_scroll_var", tk.BooleanVar(value=False)).get() or not self._sf:
+                return
+            speed = max(1, int(self._settings.get("auto_scroll_speed", 2)))
+            self._sf.canvas.yview_scroll(speed, "units")
+            self._auto_scroll_job = self.root.after(850, tick)
+        self._auto_scroll_job = self.root.after(850, tick)
+
     def _switch_view(self):
         self._view_mode = self._view_var.get()
         self._reload()
@@ -1404,7 +1611,9 @@ class RSSApp:
                                       parent=self.root)
         if url and url.strip():
             url = url.strip()
-            self.store.add_feed(url)
+            category = simpledialog.askstring(t("category_title"), t("category_prompt"),
+                                              parent=self.root) or "عمومی"
+            self.store.add_feed(url, category=category)
             # track in settings so it survives restart
             added = self._settings.setdefault("added_feeds", [])
             deleted = self._settings.setdefault("deleted_feeds", [])
@@ -1430,20 +1639,74 @@ class RSSApp:
     def _toggle_pin(self, url, pinned):
         self.store.pin_feed(url, not pinned); self._refresh_sidebar()
 
+    def _mark_all_read(self):
+        feed = None if self._active_feed == "__bookmarks__" else self._active_feed
+        count = self.store.mark_all_seen(feed)
+        self._refresh_sidebar()
+        self._reload()
+        self._set_status(t("marked_all_read", n=count))
+
+    def _import_opml(self):
+        path = filedialog.askopenfilename(parent=self, title=t("import_opml"),
+                                          filetypes=[("OPML", "*.opml *.xml"), ("All files", "*.*")])
+        if not path:
+            return
+        try:
+            count = self.store.import_opml(path)
+            self._refresh_sidebar()
+            self._set_status(t("import_done", n=count))
+        except Exception as exc:
+            messagebox.showerror(t("import_opml"), str(exc), parent=self.root)
+
+    def _export_opml(self):
+        path = filedialog.asksaveasfilename(parent=self, title=t("export_opml"),
+                                            defaultextension=".opml",
+                                            filetypes=[("OPML", "*.opml")])
+        if not path:
+            return
+        try:
+            self.store.export_opml(path, "RSS Reader Pro")
+            self._set_status(t("export_done"))
+        except Exception as exc:
+            messagebox.showerror(t("export_opml"), str(exc), parent=self.root)
+
+    def _export_bookmarks(self):
+        path = filedialog.asksaveasfilename(parent=self, title=t("export_bookmarks"),
+                                            defaultextension=".html",
+                                            filetypes=[("HTML", "*.html"), ("PDF", "*.pdf")])
+        if not path:
+            return
+        try:
+            if path.lower().endswith(".pdf"):
+                self.store.export_bookmarks_pdf(path)
+            else:
+                self.store.export_bookmarks_html(path)
+            self._set_status(t("export_done"))
+        except Exception as exc:
+            messagebox.showerror(t("export_bookmarks"), str(exc), parent=self.root)
+
     def _check_all(self):
         self._set_status(t("checking_all"))
         def worker():
             for f in self.store.get_feeds():
-                for it in core.fetch_feed(f["url"]):
-                    self.store.upsert(it, f["url"])
+                self._fetch_feed_data(f["url"], f.get("title") or f["url"], notify=True)
                 time.sleep(0.3)
+            self.root.after(0, self._refresh_sidebar)
             self.root.after(0, self._reload)
             self.root.after(0, lambda: self._set_status(t("checked_all")))
         threading.Thread(target=worker, daemon=True).start()
 
-    def _fetch_feed(self, url):
+    def _fetch_feed_data(self, url, feed_title, notify=False):
         items = core.fetch_feed(url)
-        for it in items: self.store.upsert(it, url)
+        new_items = [item for item in items if self.store.upsert(item, url)]
+        if notify and self._settings.get("notifications", True) and new_items:
+            core.notify_new_items(feed_title, new_items)
+        return items, new_items
+
+    def _fetch_feed(self, url):
+        feed = next((f for f in self.store.get_feeds() if f["url"] == url), {})
+        items, _ = self._fetch_feed_data(url, feed.get("title") or url, notify=True)
+        self.root.after(0, self._refresh_sidebar)
         self.root.after(0, self._reload)
         self.root.after(0, lambda: self._set_status(t("fetched", n=len(items), url=url)))
 
@@ -1506,9 +1769,13 @@ class RSSApp:
         added    = self._settings.get("added_feeds", [])
 
         # Add default feeds — but skip ones the user explicitly deleted
-        for url in config.DEFAULT_FEEDS:
+        for feed in config.DEFAULT_FEEDS:
+            if isinstance(feed, tuple):
+                url, title, category = feed
+            else:
+                url, title, category = feed, "", "عمومی"
             if url not in existing and url not in deleted:
-                self.store.add_feed(url)
+                self.store.add_feed(url, title, category)
 
         # Re-add user-added feeds that may have been lost
         for url in added:
@@ -1522,16 +1789,15 @@ class RSSApp:
                 while True:
                     time.sleep(config.CHECK_INTERVAL)
                     for f in self.store.get_feeds():
-                        for it in core.fetch_feed(f["url"]):
-                            self.store.upsert(it, f["url"])
+                        self._fetch_feed_data(f["url"], f.get("title") or f["url"], notify=True)
+                    self.root.after(0, self._refresh_sidebar)
                     self.root.after(0, self._reload)
             threading.Thread(target=auto, daemon=True).start()
 
     def _initial_load(self):
         self.root.after(0, lambda: self._set_status("Fetching feeds..."))
         for f in self.store.get_feeds():
-            for it in core.fetch_feed(f["url"]):
-                self.store.upsert(it, f["url"])
+            self._fetch_feed_data(f["url"], f.get("title") or f["url"], notify=False)
         self.root.after(0, self._reload)
         self.root.after(0, lambda: self._set_status(t("ready")))
 

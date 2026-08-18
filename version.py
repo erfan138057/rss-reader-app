@@ -1,9 +1,9 @@
 # Version Information
 
-__version__ = "1.0.0"
-__release_date__ = "2025-01-01"
+__version__ = "1.0.3"
+__release_date__ = "2026-08-18"
 __status__ = "Stable"
-__build__ = "20250101"
+__build__ = "20260818"
 
 # Supported Platforms
 SUPPORTED_PLATFORMS = ["Windows"]
@@ -22,6 +22,13 @@ FEATURES = {
     "dns_scanner": True,
     "internet_monitor": True,
     "persistent_settings": True,
+    "feed_categories": True,
+    "advanced_search": True,
+    "reader_mode": True,
+    "bookmark_export": True,
+    "opml_transfer": True,
+    "desktop_notifications": True,
+    "auto_scroll": True,
 }
 
 # Video Platforms Supported
