@@ -69,13 +69,13 @@ Standalone executable will be available in Releases section.
 
 ### Built With
 - **Python 3.8+** - Core programming language
-- **Tkinter** - GUI framework
-- **VLC** - Video playback via python-vlc
+- **PySide6 / Qt** - Modern desktop GUI framework with a custom Signal Modular design system
+- **System default media handler** - Video opens with the player's own installed/default application; optional custom player path supported
 - **SQLite** - Local data storage
-- **Requests** - HTTP client with DoH support
+- **httpx** - HTTP client with DoH support
 
 ### Architecture
-- Modular design (core, gui, config separated)
+- Modular design (core, qt_gui, legacy gui compatibility layer, config separated)
 - Threading for non-blocking UI
 - Smart caching system for performance
 - Comprehensive error handling

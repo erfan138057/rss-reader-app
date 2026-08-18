@@ -2057,8 +2057,7 @@ class RSSApp:
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    root = tk.Tk()
-    root.geometry("980x700")
-    root.minsize(740, 520)
-    RSSApp(root)
-    root.mainloop()
+    # Keep this module as a compatibility layer for legacy helpers/tests, while
+    # the shipped application now runs on the modern PySide6 presentation layer.
+    from qt_gui import run
+    sys.exit(run())

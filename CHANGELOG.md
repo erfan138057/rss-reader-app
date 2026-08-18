@@ -19,9 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automated tests for categories, unread state, advanced search, popularity sorting, OPML transfer and bookmark HTML export.
 
 ### Changed
+- Rebuilt the desktop presentation layer on **PySide6 / Qt** with a Signal Modular dashboard: compact navigation rail, visual story cards, a three-column workspace, custom controls and an insight panel.
+- Preserved the existing `core.py` RSS, SQLite, DNS, OPML, bookmark, Reader Mode, notification and media logic behind the new Qt interface.
+- Switched Windows packaging from the legacy Tkinter entry point to the PySide6 application entry point.
+- Moved frozen-build database and settings storage to a durable per-user application-data directory, with one-time migration from legacy side-by-side files.
 - Expanded the local SQLite schema with a backward-compatible feed category migration.
 - Extended settings persistence for notifications, auto-scroll speed and new sorting choices.
-- Updated runtime dependencies for Reader Mode, notifications and PDF export.
+- Updated runtime dependencies for Reader Mode, notifications, PDF export and PySide6.
 
 ## [1.0.0] - 2025-01-01
 

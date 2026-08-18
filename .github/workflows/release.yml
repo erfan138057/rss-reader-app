@@ -26,7 +26,7 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --windowed --name "RSS-Reader-Pro" gui.py
+        pyinstaller --onefile --windowed --name "RSS-Reader-Pro" qt_gui.py
 
     - name: Upload EXE to Release
       uses: svenstaro/upload-release-action@v2

@@ -83,7 +83,7 @@ python gui.py
 
 - 🇮🇷 **Iranian users** — bypass DNS filtering out of the box
 - 🔒 **Privacy enthusiasts** — fully offline, zero telemetry
-- 📰 **News readers** — clean Reddit & Telegram style UI
+- 📰 **News readers** — modern Signal Modular dashboard with visual story cards and a focused reading workspace
 - 🎬 **Video consumers** — YouTube playback built in
 - 🐍 **Python developers** — clean modular codebase
 
@@ -92,7 +92,7 @@ python gui.py
 ## 🛠️ Built With
 
 - **Python 3.8+** — core language
-- **Tkinter** — GUI framework
+- **PySide6 / Qt** — modern desktop GUI framework with custom cards, responsive layouts and a native Windows rendering pipeline
 - **SQLite** — local data storage
 - **httpx** — HTTP client with DoH support
 - **feedparser** — RSS/Atom parsing

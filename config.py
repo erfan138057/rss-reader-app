@@ -2,11 +2,44 @@
 config.py - App configuration
 """
 import os
+import sys
 import json
+import shutil
 
-_BASE = os.path.dirname(os.path.abspath(__file__))
-DB_FILE       = os.path.join(_BASE, "rss_reader.db")
-SETTINGS_FILE = os.path.join(_BASE, "settings.json")
+_APP_BASE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _data_dir() -> str:
+    """Return a durable per-user data directory for frozen desktop builds."""
+    if not getattr(sys, "frozen", False):
+        return _APP_BASE
+    if sys.platform.startswith("win"):
+        root = os.environ.get("APPDATA", os.path.expanduser("~"))
+    elif sys.platform == "darwin":
+        root = os.path.expanduser("~/Library/Application Support")
+    else:
+        root = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    path = os.path.join(root, "RSSReaderPro")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+_DATA_DIR = _data_dir()
+DB_FILE       = os.path.join(_DATA_DIR, "rss_reader.db")
+SETTINGS_FILE = os.path.join(_DATA_DIR, "settings.json")
+
+# One-file builds extract into a temporary directory. Copy legacy side-by-side
+# data once when present, rather than creating an empty profile on upgrade.
+if getattr(sys, "frozen", False):
+    _legacy_dir = os.path.dirname(sys.executable)
+    for _name in ("rss_reader.db", "settings.json"):
+        _target = os.path.join(_DATA_DIR, _name)
+        _legacy = os.path.join(_legacy_dir, _name)
+        if not os.path.exists(_target) and os.path.exists(_legacy):
+            try:
+                shutil.copy2(_legacy, _target)
+            except OSError:
+                pass
 
 DOH_SERVERS = [
     {"name": "Cloudflare",     "ip": "1.1.1.1",         "host": "cloudflare-dns.com"},

@@ -1,11 +1,15 @@
-# RSS Reader - نیازمندی‌ها
-httpx>=0.27
-feedparser>=6.0
-Pillow>=10.0       # برای نمایش تصویر
-# VLC اختیاری است و فقط در صورت فعال‌کردن پخش داخلی استفاده می‌شود.
-# پخش پیش‌فرض از پلیر پیش‌فرض سیستم‌عامل استفاده می‌کند.
-pyinstaller>=6.0
-beautifulsoup4>=4.12  # برای Reader Mode
-plyer>=2.1            # برای اعلان‌های دسکتاپ
-reportlab>=4.0        # برای خروجی PDF نشان‌گذاری‌ها
-# tkinter داخل پایتون ویندوز هست - نیاز به pip نداره
+# Core RSS and networking
+httpx
+feedparser
+beautifulsoup4
+
+# Desktop interface and media
+PySide6>=6.11,<6.12
+Pillow
+plyer
+
+# Export and packaging
+reportlab
+pyinstaller
+
+# VLC is optional. Video opens with the user's system/default player by default.
