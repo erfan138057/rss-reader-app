@@ -32,68 +32,73 @@ from i18n import t
 # ---------------------------------------------------------------------------
 THEMES = {
     "dark": {
-        "bg":            "#0F1923",
-        "sidebar":       "#0A1219",
-        "card":          "#162231",
-        "card_seen":     "#0F1923",
-        "card_hover":    "#1E3248",
-        "accent":        "#3B82F6",
-        "accent2":       "#60A5FA",
-        "accent_glow":   "#1D4ED8",
-        "text_primary":  "#F1F5F9",
-        "text_secondary":"#6B8099",
-        "text_seen":     "#3D5166",
-        "badge":         "#3B82F6",
-        "badge_new":     "#EF4444",
-        "separator":     "#0A1219",
-        "input_bg":      "#1A2D40",
-        "btn":           "#3B82F6",
-        "btn_hover":     "#2563EB",
-        "danger":        "#EF4444",
-        "success":       "#10B981",
-        "warning":       "#F59E0B",
-        "panel":         "#131F2E",
-        "reddit_header": "#111C27",
-        "reddit_card":   "#162231",
-        "reddit_border": "#1E3248",
-        "tag_bg":        "#1E3A5F",
-        "tag_fg":        "#60A5FA",
-        "tag_video":     "#7C3AED",
+        # Signal Modular: deep navy surfaces with teal status and vermilion breaking accents.
+        "bg":            "#101827",
+        "sidebar":       "#0B1220",
+        "card":          "#172338",
+        "card_seen":     "#131E2F",
+        "card_hover":    "#20314B",
+        "accent":        "#2DD4BF",
+        "accent2":       "#7CE8DD",
+        "accent_glow":   "#164E63",
+        "text_primary":  "#F8FAFC",
+        "text_secondary":"#9AAAC0",
+        "text_seen":     "#65758D",
+        "badge":         "#0F766E",
+        "badge_new":     "#F06A5A",
+        "separator":     "#23324A",
+        "input_bg":      "#18253A",
+        "btn":           "#1D9C93",
+        "btn_hover":     "#147C75",
+        "danger":        "#FB7185",
+        "success":       "#34D399",
+        "warning":       "#FBBF24",
+        "panel":         "#141F31",
+        "reddit_header": "#141F31",
+        "reddit_card":   "#172338",
+        "reddit_border": "#2A3B55",
+        "tag_bg":        "#20314B",
+        "tag_fg":        "#8BE9E0",
+        "tag_video":     "#312E81",
         "tag_video_fg":  "#C4B5FD",
-        "pin_color":     "#F59E0B",
-        "active_feed":   "#1D4ED8",
+        "pin_color":     "#FBBF24",
+        "active_feed":   "#1A3B4A",
+        "breaking":      "#F06A5A",
+        "surface2":      "#1B2A41",
     },
     "light": {
-        "bg":            "#F8FAFC",
+        "bg":            "#F3F6FA",
         "sidebar":       "#FFFFFF",
         "card":          "#FFFFFF",
-        "card_seen":     "#F1F5F9",
-        "card_hover":    "#E2E8F0",
-        "accent":        "#2563EB",
-        "accent2":       "#3B82F6",
-        "accent_glow":   "#BFDBFE",
-        "text_primary":  "#0F172A",
+        "card_seen":     "#F7F9FC",
+        "card_hover":    "#EEF4F7",
+        "accent":        "#0F8F86",
+        "accent2":       "#138F87",
+        "accent_glow":   "#CFF7F3",
+        "text_primary":  "#172033",
         "text_secondary":"#64748B",
-        "text_seen":     "#94A3B8",
-        "badge":         "#2563EB",
-        "badge_new":     "#EF4444",
-        "separator":     "#E2E8F0",
-        "input_bg":      "#F1F5F9",
-        "btn":           "#2563EB",
-        "btn_hover":     "#1D4ED8",
-        "danger":        "#EF4444",
-        "success":       "#10B981",
-        "warning":       "#F59E0B",
-        "panel":         "#F1F5F9",
+        "text_seen":     "#98A6B9",
+        "badge":         "#0F8F86",
+        "badge_new":     "#E65D4F",
+        "separator":     "#DFE7F0",
+        "input_bg":      "#EEF3F8",
+        "btn":           "#0F8F86",
+        "btn_hover":     "#0B726C",
+        "danger":        "#E65D4F",
+        "success":       "#0F9D75",
+        "warning":       "#C77A13",
+        "panel":         "#FFFFFF",
         "reddit_header": "#FFFFFF",
         "reddit_card":   "#FFFFFF",
-        "reddit_border": "#E2E8F0",
-        "tag_bg":        "#EFF6FF",
-        "tag_fg":        "#2563EB",
-        "tag_video":     "#F3E8FF",
-        "tag_video_fg":  "#7C3AED",
-        "pin_color":     "#D97706",
-        "active_feed":   "#2563EB",
+        "reddit_border": "#DFE7F0",
+        "tag_bg":        "#E7F6F4",
+        "tag_fg":        "#0B726C",
+        "tag_video":     "#F1EDFF",
+        "tag_video_fg":  "#5B4AB8",
+        "pin_color":     "#C77A13",
+        "active_feed":   "#DDF5F1",
+        "breaking":      "#E65D4F",
+        "surface2":      "#F7FAFC",
     },
 }
 C = THEMES["dark"]
@@ -101,11 +106,11 @@ C = THEMES["dark"]
 # fonts — rebuilt when font_size changes
 def _fonts(size=9):
     return {
-        "title":   ("Segoe UI", size+1, "bold"),
+        "title":   ("Segoe UI", size+2, "bold"),
         "body":    ("Segoe UI", size),
-        "meta":    ("Segoe UI", size-1),
-        "large":   ("Segoe UI", size+3, "bold"),
-        "btn":     ("Segoe UI", size),
+        "meta":    ("Segoe UI", max(8, size-1)),
+        "large":   ("Segoe UI", size+5, "bold"),
+        "btn":     ("Segoe UI", size, "bold"),
         "mono":    ("Courier New", size),
         "tag":     ("Segoe UI", size-1, "bold"),
     }
@@ -135,9 +140,13 @@ def resize_image(data: bytes, w: int, h: int):
     except: return None
 
 def _btn(parent, text, cmd, bg=None, fg=None, **kw):
+    # Allow individual controls to override spacing without passing duplicate Tk options.
+    padx = kw.pop("padx", 12)
+    pady = kw.pop("pady", 6)
     b = tk.Button(parent, text=text, command=cmd,
                    bg=bg or C["btn"], fg=fg or "white",
-                   font=F["btn"], relief="flat", padx=12, pady=6,
+                   font=F["btn"], relief="flat", borderwidth=0,
+                   highlightthickness=0, takefocus=0, padx=padx, pady=pady,
                    activebackground=C["btn_hover"],
                    activeforeground="white", **kw)
     return b
@@ -893,7 +902,8 @@ class LogWindow(tk.Toplevel):
 # News Card (Telegram style)
 # ---------------------------------------------------------------------------
 class NewsCard(tk.Frame):
-    TW, TH = 80, 60
+    # Signal Modular cards are intentionally spacious enough for scanning at a glance.
+    TW, TH = 132, 92
 
     def __init__(self, master, item, on_click, on_context=None, load_images=True, **kw):
         seen = bool(item.get("seen"))
@@ -914,66 +924,53 @@ class NewsCard(tk.Frame):
         seen = bool(self.item.get("seen"))
         tc = C["text_seen"] if seen else C["text_primary"]
         mc = C["text_seen"] if seen else C["text_secondary"]
+        self.configure(highlightthickness=1, highlightbackground=C["reddit_border"], highlightcolor=C["accent"])
 
-        # Left accent bar (blue for unread)
-        bar_color = C["accent"] if not seen else C["separator"]
-        tk.Frame(self, width=3, bg=bar_color).pack(side="left", fill="y")
+        inner = tk.Frame(self, bg=self._bg)
+        inner.pack(fill="both", expand=True, padx=1, pady=1)
+        accent = C["accent"] if not seen else C["separator"]
+        tk.Frame(inner, height=3, bg=accent).pack(fill="x")
+        body = tk.Frame(inner, bg=self._bg)
+        body.pack(fill="both", expand=True, padx=12, pady=12)
 
-        self.img_lbl = tk.Label(self, bg=self._bg, image=self._ph,
-                                 width=self.TW, height=self.TH)
+        self.img_lbl = tk.Label(body, bg=self._bg, image=self._ph, width=self.TW, height=self.TH)
         self.img_lbl.image = self._ph
-        self.img_lbl.pack(side="left", padx=(8,8), pady=8)
+        self.img_lbl.pack(side="left", padx=(0, 12), anchor="n")
 
-        tf = tk.Frame(self, bg=self._bg)
-        tf.pack(side="left", fill="both", expand=True, pady=8, padx=(0,8))
-
-        # Badges row
-        badge_row = tk.Frame(tf, bg=self._bg)
-        badge_row.pack(anchor="w", pady=(0,2))
-        if self.item.get("video_url"):
-            vt = self.item.get("video_type","")
-            icon = "▶ YouTube" if vt=="youtube" else ("▶ Vimeo" if vt=="vimeo" else "▶ Video")
-            tk.Label(badge_row, text=icon, font=F["tag"],
-                      fg=C.get("tag_video_fg","#C4B5FD"),
-                      bg=C.get("tag_video","#7C3AED"),
-                      padx=5, pady=1).pack(side="left", padx=(0,4))
-        if not seen:
-            tk.Label(badge_row, text="NEW", font=F["tag"],
-                      fg="white", bg=C.get("badge_new", C["badge"]),
-                      padx=5, pady=1).pack(side="left")
-
-        tk.Label(tf, text=self.item.get("title",""), font=F["title"],
-                  fg=tc, bg=self._bg, anchor="w", justify="left",
-                  wraplength=420).pack(anchor="w")
-
-        sm = self.item.get("summary","")
-        if sm:
-            tk.Label(tf, text=sm[:120]+("…" if len(sm)>120 else ""),
-                      font=F["body"], fg=mc, bg=self._bg,
-                      anchor="w", justify="left", wraplength=420).pack(anchor="w", pady=(2,0))
-
+        copy = tk.Frame(body, bg=self._bg)
+        copy.pack(side="left", fill="both", expand=True, anchor="n")
         from urllib.parse import urlparse as up
-        domain = up(self.item.get("feed","")).netloc
-        pub = self.item.get("published","")[:16]
-        meta = f"🕐 {pub}   🌐 {domain}" if domain else f"🕐 {pub}"
-        tk.Label(tf, text=meta, font=F["meta"], fg=mc,
-                  bg=self._bg, anchor="w").pack(anchor="w", pady=(4,0))
+        domain = up(self.item.get("feed", "")).netloc
+        eyebrow = tk.Frame(copy, bg=self._bg)
+        eyebrow.pack(fill="x", anchor="w", pady=(0, 5))
+        if not seen:
+            tk.Label(eyebrow, text="●  UNREAD", font=F["tag"], fg=C["accent"],
+                     bg=self._bg).pack(side="left")
+        if domain:
+            tk.Label(eyebrow, text=("  " if not seen else "   ") + domain.upper()[:22],
+                     font=F["meta"], fg=mc, bg=self._bg).pack(side="left")
+        if self.item.get("video_url"):
+            tk.Label(eyebrow, text="  ▶", font=F["meta"], fg=C["tag_video_fg"],
+                     bg=self._bg).pack(side="left")
 
-        # Bookmark button
+        tk.Label(copy, text=self.item.get("title", ""), font=F["title"], fg=tc,
+                 bg=self._bg, anchor="w", justify="left", wraplength=260).pack(anchor="w")
+        sm = self.item.get("summary", "")
+        if sm:
+            tk.Label(copy, text=sm[:100] + ("…" if len(sm) > 100 else ""), font=F["body"],
+                     fg=mc, bg=self._bg, anchor="w", justify="left", wraplength=265).pack(anchor="w", pady=(4, 0))
+        pub = self.item.get("published", "")[:16]
+        tk.Label(copy, text=f"{pub}  ·  {domain}" if domain else pub, font=F["meta"],
+                 fg=mc, bg=self._bg, anchor="w").pack(anchor="w", pady=(7, 0))
+
         is_bm = bool(self.item.get("bookmarked"))
-        bm_btn = tk.Button(
-            self, text="🔖",
-            font=("", 10), bg=self._bg,
-            fg=C.get("warning","#F59E0B") if is_bm else C["text_seen"],
-            relief="flat", padx=6, pady=4,
-            command=self._toggle_bookmark
-        )
-        bm_btn.pack(side="right", padx=(0,4), pady=4)
+        bm_btn = tk.Button(body, text="▮" if is_bm else "▯", font=("Segoe UI", 13),
+                           bg=self._bg, fg=C["warning"] if is_bm else C["text_seen"], relief="flat",
+                           padx=3, pady=2, command=self._toggle_bookmark)
+        bm_btn.pack(side="right", anchor="n")
         self._bm_btn = bm_btn
-
-        tk.Frame(self, height=1, bg=C["separator"]).pack(side="bottom", fill="x")
-        for w in tf.winfo_children(): self._bw(w)
-        for w in badge_row.winfo_children(): self._bw(w)
+        for w in (inner, body, copy, eyebrow, self.img_lbl): self._bw(w)
+        for w in copy.winfo_children() + eyebrow.winfo_children(): self._bw(w)
 
     def _bw(self, w):
         w.bind("<Button-1>", self._clicked)
@@ -1002,9 +999,12 @@ class NewsCard(tk.Frame):
 
     def _sbg(self, color):
         self.configure(bg=color)
-        for w in self.winfo_children():
-            try: w.configure(bg=color)
-            except: pass
+        def paint(widget):
+            for child in widget.winfo_children():
+                try: child.configure(bg=color)
+                except: pass
+                paint(child)
+        paint(self)
 
     def _clicked(self, e=None): self.on_click(self.item)
 
@@ -1252,8 +1252,12 @@ class RSSApp:
     # ── Layout ──
     def _build(self):
         self.root.title(t("app_title"))
+        self.root.configure(bg=C["bg"])
+        self.root.minsize(1120, 680)
 
-        self.sidebar = tk.Frame(self.root, bg=C["sidebar"], width=235)
+        # Signal Modular uses a quiet navigation rail and a spacious central workspace.
+        self.sidebar = tk.Frame(self.root, bg=C["sidebar"], width=224,
+                                highlightthickness=0)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
         self._build_sidebar()
@@ -1265,39 +1269,38 @@ class RSSApp:
             self.root.after(500, self._schedule_auto_scroll)
 
     def _build_sidebar(self):
-        # Logo + theme toggle
-        logo = tk.Frame(self.sidebar, bg=C["sidebar"], pady=14)
-        logo.pack(fill="x")
-        tk.Label(logo, text="📡 "+t("app_title"), font=F["large"],
-                  fg=C["text_primary"], bg=C["sidebar"]).pack(side="left", padx=12)
-        tk.Button(logo, text="☀️" if self._settings.get("theme")=="dark" else "🌙",
-                   font=("",11), bg=C["sidebar"], fg=C["text_primary"],
-                   relief="flat", command=self._toggle_theme
-                   ).pack(side="right", padx=8)
+        # Brand block: compact and intentional rather than a toolbar of utilities.
+        logo = tk.Frame(self.sidebar, bg=C["sidebar"], pady=18)
+        logo.pack(fill="x", padx=16)
+        mark = tk.Label(logo, text="⌁", font=("Segoe UI", 25, "bold"),
+                        fg=C["accent"], bg=C["sidebar"], width=2)
+        mark.pack(side="left")
+        brand = tk.Frame(logo, bg=C["sidebar"])
+        brand.pack(side="left", padx=(7, 0))
+        tk.Label(brand, text=t("app_title"), font=F["large"],
+                 fg=C["text_primary"], bg=C["sidebar"]).pack(anchor="w")
+        tk.Label(brand, text="YOUR DAILY SIGNAL", font=F["meta"],
+                 fg=C["text_seen"], bg=C["sidebar"]).pack(anchor="w")
+        tk.Button(logo, text="☀" if self._settings.get("theme") == "dark" else "◐",
+                  font=("Segoe UI", 11), bg=C["sidebar"], fg=C["text_secondary"],
+                  relief="flat", command=self._toggle_theme).pack(side="right")
 
-        tk.Frame(self.sidebar, height=1, bg=C["bg"]).pack(fill="x")
+        nav = tk.Frame(self.sidebar, bg=C["sidebar"])
+        nav.pack(fill="x", padx=12, pady=(5, 10))
+        self._sb_btn(nav, "◉  " + t("all_feeds"), lambda: self._select_feed(None), selected=True)
+        self._sb_btn(nav, "▣  " + t("bookmarks"), self._show_bookmarks)
 
-        tools = tk.Frame(self.sidebar, bg=C["sidebar"], pady=4)
-        tools.pack(fill="x", padx=6)
-        for label_key, cmd in [
-            ("dns_scanner",  self._open_dns),
-            ("add_feed",     self._add_feed),
-            ("check_all",    self._check_all),
-            ("mark_all_read", self._mark_all_read),
-            ("bookmarks",    self._show_bookmarks),
-            ("import_opml",  self._import_opml),
-            ("export_opml",  self._export_opml),
-            ("export_bookmarks", self._export_bookmarks),
-            ("log",          self._open_log),
-            ("settings",     self._open_settings),
-        ]:
-            self._sb_btn(tools, t(label_key), cmd)
+        quick = tk.Frame(self.sidebar, bg=C["sidebar"])
+        quick.pack(fill="x", padx=16, pady=(2, 14))
+        _btn(quick, "+  " + t("add_feed"), self._add_feed,
+             bg=C["btn"], fg="white", padx=9, pady=5).pack(side="left")
+        _btn(quick, "↻", self._check_all, bg=C["surface2"],
+             fg=C["text_primary"], padx=10, pady=5).pack(side="left", padx=6)
+        _btn(quick, "⚙", self._open_settings, bg=C["surface2"],
+             fg=C["text_primary"], padx=10, pady=5).pack(side="right")
 
-        tk.Frame(self.sidebar, height=1, bg=C["bg"]).pack(fill="x", pady=4)
-        tk.Label(self.sidebar, text=t("feeds"), font=F["meta"],
-                  fg=C["text_secondary"], bg=C["sidebar"]).pack(anchor="w", padx=14, pady=(2,2))
-
-        # Feed list
+        tk.Label(self.sidebar, text="FEED COLLECTIONS", font=F["meta"],
+                 fg=C["text_seen"], bg=C["sidebar"]).pack(anchor="w", padx=18, pady=(0, 6))
         wrap = tk.Frame(self.sidebar, bg=C["sidebar"])
         wrap.pack(fill="both", expand=True)
         cv = tk.Canvas(wrap, bg=C["sidebar"], highlightthickness=0)
@@ -1306,140 +1309,138 @@ class RSSApp:
         cv.pack(side="left", fill="both", expand=True)
         vsb.pack(side="right", fill="y")
         self._feed_inner = tk.Frame(cv, bg=C["sidebar"])
-        cw = cv.create_window((0,0), window=self._feed_inner, anchor="nw")
-        self._feed_inner.bind("<Configure>", lambda e: cv.configure(
-            scrollregion=cv.bbox("all")))
+        cw = cv.create_window((0, 0), window=self._feed_inner, anchor="nw")
+        self._feed_inner.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
         cv.bind("<Configure>", lambda e: cv.itemconfig(cw, width=e.width))
 
-        # Bottom status
-        bot = tk.Frame(self.sidebar, bg=C["sidebar"])
-        bot.pack(side="bottom", fill="x")
-        self._dns_lbl = tk.Label(bot, text=f"DNS: {config.ACTIVE_DOH['name']}",
-                                  font=F["meta"], fg=C["text_secondary"], bg=C["sidebar"])
-        self._dns_lbl.pack(anchor="w", padx=10, pady=(4,0))
-        self._net_side_lbl = tk.Label(bot, text=t("net_checking"),
-                                       font=F["meta"], fg=C["text_secondary"],
-                                       bg=C["sidebar"])
-        self._net_side_lbl.pack(anchor="w", padx=10, pady=(0,6))
+        utility = tk.Frame(self.sidebar, bg=C["sidebar"])
+        utility.pack(fill="x", padx=12, pady=(8, 2))
+        for label_key, cmd in [("mark_all_read", self._mark_all_read),
+                               ("import_opml", self._import_opml),
+                               ("export_opml", self._export_opml),
+                               ("export_bookmarks", self._export_bookmarks),
+                               ("dns_scanner", self._open_dns),
+                               ("log", self._open_log)]:
+            self._sb_btn(utility, t(label_key), cmd, compact=True)
 
-    def _sb_btn(self, parent, text, cmd):
-        icon_map = {"DNS Scanner":"🔍 ","Add Feed":"➕ ","Refresh All":"🔄 ",
-                    "Mark all as read":"✓ ","Bookmarks":"🔖 ","Import OPML":"⇩ ",
-                    "Export OPML":"⇧ ","Export bookmarks":"⤓ ","App Log":"📋 ","Settings":"⚙️ ",
-                    "اسکنر DNS":"🔍 ","افزودن فید":"➕ ","چک همه":"🔄 ",
-                    "خواندن همه":"✓ ","نشان‌گذاری‌ها":"🔖 ","ورود OPML":"⇩ ",
-                    "خروجی OPML":"⇧ ","خروجی نشان‌گذاری‌ها":"⤓ ","لاگ برنامه":"📋 ","تنظیمات":"⚙️ "}
-        display = icon_map.get(text, "") + text
-        btn = tk.Button(parent, text=display, font=F["btn"],
-                         bg=C["sidebar"], fg=C["text_primary"],
-                         relief="flat", anchor="w", padx=10, pady=7,
-                         activebackground=C["card_hover"],
-                         activeforeground=C["text_primary"], command=cmd)
+        bot = tk.Frame(self.sidebar, bg=C["sidebar"], highlightthickness=1,
+                       highlightbackground=C["separator"])
+        bot.pack(side="bottom", fill="x", padx=12, pady=12)
+        self._dns_lbl = tk.Label(bot, text=f"DNS · {config.ACTIVE_DOH['name']}",
+                                  font=F["meta"], fg=C["text_secondary"], bg=C["sidebar"])
+        self._dns_lbl.pack(anchor="w", padx=10, pady=(7, 1))
+        self._net_side_lbl = tk.Label(bot, text="● " + t("net_checking"), font=F["meta"],
+                                      fg=C["success"], bg=C["sidebar"])
+        self._net_side_lbl.pack(anchor="w", padx=10, pady=(0, 7))
+
+    def _sb_btn(self, parent, text, cmd, selected=False, compact=False):
+        bg = C["active_feed"] if selected else C["sidebar"]
+        fg = C["text_primary"] if selected else C["text_secondary"]
+        btn = tk.Button(parent, text=text, font=F["meta"] if compact else F["btn"],
+                         bg=bg, fg=fg, relief="flat", borderwidth=0, highlightthickness=0,
+                         anchor="w", padx=10, pady=4 if compact else 7,
+                         activebackground=C["card_hover"], activeforeground=C["text_primary"], command=cmd)
         btn.pack(fill="x", pady=1)
-        btn.bind("<Enter>", lambda e,b=btn: b.configure(bg=C["card_hover"]))
-        btn.bind("<Leave>", lambda e,b=btn: b.configure(bg=C["sidebar"]))
+        btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=C["card_hover"], fg=C["text_primary"]))
+        btn.bind("<Leave>", lambda e, b=btn, base=bg, color=fg: b.configure(bg=base, fg=color))
 
     def _build_main(self):
-        # Header
-        self._hdr = tk.Frame(self.main, bg=C["sidebar"], pady=10)
+        # A composed, three-layer workspace replaces the old dense global toolbar.
+        shell = tk.Frame(self.main, bg=C["bg"])
+        shell.pack(fill="both", expand=True, padx=22, pady=(18, 10))
+
+        self._hdr = tk.Frame(shell, bg=C["bg"])
         self._hdr.pack(fill="x")
-        self._hdr_title = tk.Label(self._hdr, text=t("all_news"),
-                                    font=F["large"], fg=C["text_primary"],
-                                    bg=C["sidebar"])
-        self._hdr_title.pack(side="left", padx=14)
-        self._hdr_count = tk.Label(self._hdr, text="", font=F["meta"],
-                                    fg=C["text_secondary"], bg=C["sidebar"])
-        self._hdr_count.pack(side="right", padx=14)
+        title_box = tk.Frame(self._hdr, bg=C["bg"])
+        title_box.pack(side="left")
+        self._hdr_title = tk.Label(title_box, text=t("all_news"), font=F["large"],
+                                    fg=C["text_primary"], bg=C["bg"])
+        self._hdr_title.pack(anchor="w")
+        self._hdr_count = tk.Label(title_box, text="", font=F["meta"],
+                                   fg=C["text_secondary"], bg=C["bg"])
+        self._hdr_count.pack(anchor="w", pady=(1, 0))
 
-        # View toggle
-        vf = tk.Frame(self._hdr, bg=C["sidebar"])
-        vf.pack(side="right", padx=6)
-        self._view_var = tk.StringVar(value=self._view_mode)
-        for lbl, val in [(t("view_telegram"),"telegram"),(t("view_reddit"),"reddit")]:
-            tk.Radiobutton(vf, text=lbl, value=val, variable=self._view_var,
-                            font=F["btn"], fg=C["text_primary"], bg=C["sidebar"],
-                            selectcolor=C["accent"],
-                            activebackground=C["sidebar"],
-                            command=self._switch_view).pack(side="left", padx=4)
-
-        # Show read
-        self._show_read_var = tk.BooleanVar(value=self._settings.get("show_read",True))
-        tk.Checkbutton(self._hdr, text=t("show_read"),
-                        variable=self._show_read_var, font=F["btn"],
-                        fg=C["text_secondary"], bg=C["sidebar"],
-                        selectcolor=C["input_bg"],
-                        activebackground=C["sidebar"],
-                        command=self._reload).pack(side="right", padx=6)
-
-        # Sort
-        self._sort_var = tk.StringVar(value=self._settings.get("sort","newest"))
-        sf = tk.Frame(self._hdr, bg=C["sidebar"])
-        sf.pack(side="right", padx=4)
-        for lbl, val in [(t("sort_newest"),"newest"),(t("sort_oldest"),"oldest"),(t("sort_popularity"),"popularity")]:
-            tk.Radiobutton(sf, text=lbl, value=val, variable=self._sort_var,
-                            font=F["meta"], fg=C["text_secondary"], bg=C["sidebar"],
-                            selectcolor=C["accent"],
-                            activebackground=C["sidebar"],
-                            command=self._reload).pack(side="left", padx=2)
-
-        # Fast actions
-        _btn(self._hdr, t("mark_all_read"), self._mark_all_read,
-             bg=C["input_bg"], fg=C["text_primary"]).pack(side="right", padx=4)
+        actions = tk.Frame(self._hdr, bg=C["bg"])
+        actions.pack(side="right", pady=4)
         self._auto_scroll_var = tk.BooleanVar(value=self._settings.get("auto_scroll", False))
-        tk.Checkbutton(self._hdr, text=t("auto_scroll"), variable=self._auto_scroll_var,
+        tk.Checkbutton(actions, text=t("auto_scroll"), variable=self._auto_scroll_var,
                        command=self._toggle_auto_scroll, font=F["meta"], fg=C["text_secondary"],
-                       bg=C["sidebar"], selectcolor=C["input_bg"],
-                       activebackground=C["sidebar"]).pack(side="right", padx=5)
+                       bg=C["bg"], selectcolor=C["input_bg"], activebackground=C["bg"],
+                       activeforeground=C["text_primary"]).pack(side="left", padx=8)
+        _btn(actions, "✓  " + t("mark_all_read"), self._mark_all_read,
+             bg=C["surface2"], fg=C["text_primary"], padx=10, pady=5).pack(side="left", padx=4)
 
-        # Search
-        sr = tk.Frame(self.main, bg=C["panel"], pady=5)
-        sr.pack(fill="x")
-        tk.Label(sr, text="🔎", fg=C["text_secondary"], bg=C["panel"],
-                  font=F["body"]).pack(side="left", padx=(12,4))
+        search_row = tk.Frame(shell, bg=C["panel"], highlightthickness=1,
+                              highlightbackground=C["separator"])
+        search_row.pack(fill="x", pady=(18, 10))
+        tk.Label(search_row, text="⌕", fg=C["text_secondary"], bg=C["panel"],
+                 font=("Segoe UI", 18)).pack(side="left", padx=(14, 7))
         self._search_var = tk.StringVar()
         self._search_var.trace_add("write", lambda *a: self._reload())
-        tk.Entry(sr, textvariable=self._search_var, font=F["body"],
-                  bg=C["input_bg"], fg=C["text_primary"], relief="flat",
-                  insertbackground=C["text_primary"]).pack(
-            side="left", fill="x", expand=True, padx=(0,12), ipady=4)
+        search = tk.Entry(search_row, textvariable=self._search_var, font=F["body"],
+                          bg=C["panel"], fg=C["text_primary"], relief="flat",
+                          insertbackground=C["text_primary"])
+        search.pack(side="left", fill="x", expand=True, pady=10)
+        _btn(search_row, "Filters", self._toggle_filter_panel, bg=C["surface2"],
+             fg=C["text_primary"], padx=10, pady=4).pack(side="right", padx=8)
 
-        # Advanced search filters
-        filters = tk.Frame(self.main, bg=C["panel"], pady=4)
-        filters.pack(fill="x")
-        tk.Label(filters, text=t("advanced_search"), font=F["meta"], fg=C["text_secondary"],
-                 bg=C["panel"]).pack(side="left", padx=(12, 6))
+        toolbar = tk.Frame(shell, bg=C["bg"])
+        toolbar.pack(fill="x", pady=(0, 12))
+        self._view_var = tk.StringVar(value=self._view_mode)
+        for lbl, val in [("All stories", "telegram"), ("Timeline", "reddit")]:
+            tk.Radiobutton(toolbar, text=lbl, value=val, variable=self._view_var,
+                           font=F["btn"], fg=C["text_primary"], bg=C["surface2"],
+                           selectcolor=C["accent"], activebackground=C["surface2"],
+                           activeforeground=C["text_primary"], indicatoron=0, borderwidth=0,
+                           highlightthickness=0, padx=10, pady=5,
+                           command=self._switch_view).pack(side="left", padx=(0, 7))
+        self._show_read_var = tk.BooleanVar(value=self._settings.get("show_read", True))
+        tk.Checkbutton(toolbar, text=t("show_read"), variable=self._show_read_var,
+                       font=F["meta"], fg=C["text_secondary"], bg=C["bg"],
+                       selectcolor=C["input_bg"], activebackground=C["bg"], command=self._reload).pack(side="left", padx=8)
+        self._sort_var = tk.StringVar(value=self._settings.get("sort", "newest"))
+        ttk.Combobox(toolbar, textvariable=self._sort_var, width=15, state="readonly",
+                     values=[t("sort_newest"), t("sort_oldest"), t("sort_popularity")]).pack(side="right")
+        self._sort_var.trace_add("write", lambda *a: self._reload())
+        tk.Label(toolbar, text="SORT", font=F["meta"], fg=C["text_seen"], bg=C["bg"]).pack(side="right", padx=7)
+
+        self._filters_wrap = tk.Frame(shell, bg=C["panel"], highlightthickness=1,
+                                      highlightbackground=C["separator"])
         self._unread_only_var = tk.BooleanVar(value=False)
         self._bookmarked_only_var = tk.BooleanVar(value=False)
         for label, variable in [(t("unread_only"), self._unread_only_var),
                                 (t("bookmarked_only"), self._bookmarked_only_var)]:
-            tk.Checkbutton(filters, text=label, variable=variable, command=self._reload,
+            tk.Checkbutton(self._filters_wrap, text=label, variable=variable, command=self._reload,
                            font=F["meta"], fg=C["text_secondary"], bg=C["panel"],
-                           selectcolor=C["input_bg"], activebackground=C["panel"]).pack(side="left", padx=4)
-        self._from_date_var = tk.StringVar()
-        self._to_date_var = tk.StringVar()
+                           selectcolor=C["input_bg"], activebackground=C["panel"]).pack(side="left", padx=10, pady=8)
+        self._from_date_var = tk.StringVar(); self._to_date_var = tk.StringVar()
         for label, variable in [(t("from_date"), self._from_date_var), (t("to_date"), self._to_date_var)]:
-            entry = tk.Entry(filters, textvariable=variable, width=14, font=F["meta"],
-                             bg=C["input_bg"], fg=C["text_primary"], relief="flat",
-                             insertbackground=C["text_primary"])
-            entry.insert(0, "")
-            entry.pack(side="left", padx=4, ipady=3)
-            tk.Label(filters, text=label, font=F["meta"], fg=C["text_seen"], bg=C["panel"]).pack(side="left")
+            tk.Label(self._filters_wrap, text=label, font=F["meta"], fg=C["text_seen"],
+                     bg=C["panel"]).pack(side="left", padx=(8, 3))
+            tk.Entry(self._filters_wrap, textvariable=variable, width=12, font=F["meta"],
+                     bg=C["input_bg"], fg=C["text_primary"], relief="flat",
+                     insertbackground=C["text_primary"]).pack(side="left", padx=(0, 4), ipady=3)
             variable.trace_add("write", lambda *args: self._reload())
 
-        # Content
-        self._content = tk.Frame(self.main, bg=C["bg"])
+        self._content = tk.Frame(shell, bg=C["bg"])
         self._content.pack(fill="both", expand=True)
         self._build_content_area()
 
-        # Status bar
-        sb = tk.Frame(self.main, bg=C["sidebar"])
+        sb = tk.Frame(self.main, bg=C["sidebar"], highlightthickness=1,
+                      highlightbackground=C["separator"])
         sb.pack(fill="x", side="bottom")
-        self._status_lbl = tk.Label(sb, text=t("ready"), font=F["meta"],
-                                     fg=C["text_secondary"], bg=C["sidebar"], anchor="w")
-        self._status_lbl.pack(side="left", padx=10, pady=4)
-        self._net_lbl = tk.Label(sb, text="🌐 ...", font=F["meta"],
-                                  fg=C["text_secondary"], bg=C["sidebar"], anchor="e")
-        self._net_lbl.pack(side="right", padx=10, pady=4)
+        self._status_lbl = tk.Label(sb, text="●  " + t("ready"), font=F["meta"],
+                                    fg=C["text_secondary"], bg=C["sidebar"], anchor="w")
+        self._status_lbl.pack(side="left", padx=16, pady=6)
+        self._net_lbl = tk.Label(sb, text="●  ...", font=F["meta"], fg=C["success"],
+                                 bg=C["sidebar"], anchor="e")
+        self._net_lbl.pack(side="right", padx=16, pady=6)
+
+    def _toggle_filter_panel(self):
+        if self._filters_wrap.winfo_ismapped():
+            self._filters_wrap.pack_forget()
+        else:
+            self._filters_wrap.pack(fill="x", pady=(0, 10), before=self._content)
 
     def _build_content_area(self):
         for w in self._content.winfo_children(): w.destroy()
@@ -1467,40 +1468,42 @@ class RSSApp:
 
     def _feed_row(self, text, url, pinned=False):
         is_active = url == self._active_feed
-        bg = C.get("active_feed", C["accent"]) if is_active else C["sidebar"]
-
+        bg = C["active_feed"] if is_active else C["sidebar"]
+        fg = C["text_primary"] if is_active else C["text_secondary"]
         row = tk.Frame(self._feed_inner, bg=bg)
-        row.pack(fill="x")
-
-        # Active indicator bar
+        row.pack(fill="x", padx=10, pady=1)
         if is_active:
-            tk.Frame(row, width=3, bg=C["accent2"]).pack(side="left", fill="y")
-
-        btn = tk.Button(row, text=text, font=F["btn"], bg=bg,
-                         fg=C["text_primary"] if is_active else C["text_secondary"],
-                         relief="flat", anchor="w", padx=10, pady=7,
-                         activebackground=C["card_hover"],
-                         activeforeground=C["text_primary"],
-                         command=lambda u=url: self._select_feed(u))
+            tk.Frame(row, width=3, bg=C["accent"]).pack(side="left", fill="y", padx=(0, 7))
+        else:
+            tk.Label(row, text="•", font=F["body"], fg=C["accent"] if pinned else C["text_seen"],
+                     bg=bg, width=2).pack(side="left")
+        btn = tk.Button(row, text=text, font=F["btn"], bg=bg, fg=fg, relief="flat",
+                         borderwidth=0, highlightthickness=0, anchor="w", padx=3, pady=6, activebackground=C["card_hover"],
+                         activeforeground=C["text_primary"], command=lambda u=url: self._select_feed(u))
         btn.pack(side="left", fill="x", expand=True)
-        btn.bind("<Enter>", lambda e,r=row,b=btn: (r.configure(bg=C["card_hover"]),
-                                                    b.configure(bg=C["card_hover"],
-                                                                 fg=C["text_primary"])))
-        btn.bind("<Leave>", lambda e,r=row,b=btn,bg=bg,ia=is_active: (
-            r.configure(bg=bg),
-            b.configure(bg=bg, fg=C["text_primary"] if ia else C["text_secondary"])))
-
+        def hover(on):
+            color = C["card_hover"] if on else bg
+            row.configure(bg=color); btn.configure(bg=color, fg=C["text_primary"] if on else fg)
+            for child in row.winfo_children():
+                try: child.configure(bg=color)
+                except: pass
+        btn.bind("<Enter>", lambda e: hover(True)); btn.bind("<Leave>", lambda e: hover(False))
         if url:
-            pin_fg = C.get("pin_color", C["warning"]) if pinned else C["text_seen"]
-            pt = "📌" if pinned else "·"
-            tk.Button(row, text=pt, font=("",9), bg=bg,
-                       fg=pin_fg, relief="flat", padx=3,
-                       command=lambda u=url,p=pinned: self._toggle_pin(u,p)
-                       ).pack(side="right")
-            tk.Button(row, text="✕", font=("",8), bg=bg,
-                       fg=C["danger"], relief="flat", padx=4,
-                       command=lambda u=url: self._del_feed(u)
-                       ).pack(side="right")
+            tk.Button(row, text="⋯", font=("Segoe UI", 11), bg=bg, fg=C["text_seen"],
+                      relief="flat", padx=4, pady=1,
+                      command=lambda u=url, p=pinned: self._show_feed_menu(u, p)).pack(side="right")
+
+    def _show_feed_menu(self, url, pinned):
+        menu = tk.Menu(self.root, tearoff=0, bg=C["card"], fg=C["text_primary"],
+                       activebackground=C["accent"], activeforeground=C["sidebar"])
+        menu.add_command(label="Unpin feed" if pinned else "Pin feed",
+                         command=lambda: self._toggle_pin(url, pinned))
+        menu.add_separator()
+        menu.add_command(label="Remove feed", command=lambda: self._del_feed(url))
+        try:
+            menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
+        finally:
+            menu.grab_release()
 
     def _select_feed(self, url):
         self._active_feed = url
@@ -1547,12 +1550,23 @@ class RSSApp:
                 card.pack(fill="x", padx=4, pady=2)
                 self._cards.append(card)
         else:
-            for item in items:
-                card = NewsCard(self._sf.inner, item,
-                                 on_click=self._open_item, on_context=self._show_card_menu,
-                                 load_images=load_img)
+            # Signal Modular: a visual grid makes scanning news feel intentional, not cramped.
+            section = tk.Frame(self._sf.inner, bg=C["bg"])
+            section.pack(fill="x", padx=2, pady=(2, 10))
+            tk.Label(section, text="TOP STORIES", font=F["btn"], fg=C["text_primary"],
+                     bg=C["bg"]).pack(side="left")
+            tk.Label(section, text="CURATED FROM YOUR FEEDS", font=F["meta"],
+                     fg=C["text_seen"], bg=C["bg"]).pack(side="left", padx=10)
+            grid = tk.Frame(self._sf.inner, bg=C["bg"])
+            grid.pack(fill="both", expand=True)
+            grid.grid_columnconfigure(0, weight=1, uniform="signal")
+            grid.grid_columnconfigure(1, weight=1, uniform="signal")
+            for index, item in enumerate(items):
+                card = NewsCard(grid, item, on_click=self._open_item,
+                                 on_context=self._show_card_menu, load_images=load_img)
                 card.set_store(self.store)
-                card.pack(fill="x")
+                row, col = divmod(index, 2)
+                card.grid(row=row, column=col, sticky="nsew", padx=5, pady=5)
                 self._cards.append(card)
 
         total  = len(items)
