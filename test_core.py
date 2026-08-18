@@ -98,25 +98,38 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.store.mark_all_seen("https://news.example/rss"), 1)
         self.assertEqual(self.store.get_unread_counts(), {})
 
+    def test_feed_scoped_ids_prevent_cross_feed_collisions(self):
+        news, tech = "https://news.example/rss", "https://tech.example/rss"
+        self.store.add_feed(news, "News", "اخبار")
+        self.store.add_feed(tech, "Tech", "فناوری")
+        self.assertTrue(self.store.upsert(make_item("article-1", "News item"), news))
+        self.assertTrue(self.store.upsert(make_item("article-1", "Tech item"), tech))
+        news_item = self.store.get_items(news)[0]
+        tech_item = self.store.get_items(tech)[0]
+        self.assertEqual(news_item["title"], "News item")
+        self.assertEqual(tech_item["title"], "Tech item")
+        self.assertNotEqual(news_item["id"], tech_item["id"])
+
     def test_advanced_search_and_popularity_sort(self):
         feed = "https://news.example/rss"
         self.store.add_feed(feed, "News", "اخبار")
         self.store.upsert(make_item("article-1", "Python release", "2026-08-10T10:00:00"), feed)
         self.store.upsert(make_item("article-2", "Sports update", "2026-08-12T10:00:00"), feed)
-        self.store.mark_seen("article-2")
-        self.store.mark_seen("article-2")
-        self.store.toggle_bookmark("article-1")
+        items = {item["title"]: item["id"] for item in self.store.get_items(feed)}
+        self.store.mark_seen(items["Sports update"])
+        self.store.mark_seen(items["Sports update"])
+        self.store.toggle_bookmark(items["Python release"])
 
         results = self.store.search_items("python", feed, bookmarked_only=True,
                                           start_date="2026-08-01", end_date="2026-08-31")
-        self.assertEqual([item["id"] for item in results], ["article-1"])
-        self.assertEqual([item["id"] for item in self.store.get_items(feed, "popularity")][0], "article-2")
+        self.assertEqual([item["title"] for item in results], ["Python release"])
+        self.assertEqual(self.store.get_items(feed, "popularity")[0]["title"], "Sports update")
 
     def test_opml_and_bookmark_html_export(self):
         self.store.add_feed("https://news.example/rss", "News", "اخبار")
         self.store.add_feed("https://tech.example/rss", "Tech", "فناوری")
         self.store.upsert(make_item("article-1", "Saved news"), "https://news.example/rss")
-        self.store.toggle_bookmark("article-1")
+        self.store.toggle_bookmark(self.store.get_items("https://news.example/rss")[0]["id"])
 
         opml_path = os.path.join(self.temp_dir.name, "feeds.opml")
         html_path = os.path.join(self.temp_dir.name, "bookmarks.html")

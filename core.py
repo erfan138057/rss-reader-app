@@ -9,6 +9,7 @@ import sqlite3
 import time
 import html
 import re
+import hashlib
 import threading
 import logging
 import sys
@@ -302,12 +303,28 @@ class Store:
             pass
         LOG.info(f"DB opened: {db_file}")
 
+    @staticmethod
+    def _item_key(feed_url: str, source_id: str) -> str:
+        """Make a feed-scoped database key from an RSS source identifier.
+
+        Feed publishers commonly reuse simple IDs such as ``article-1``.  The
+        database key must therefore include the feed identity, otherwise a newer
+        item from one feed silently overwrites an unrelated item in another.
+        """
+        digest = hashlib.sha256(feed_url.encode("utf-8")).hexdigest()[:16]
+        return f"{digest}:{source_id}"
+
     def upsert(self, item: dict, feed_url: str) -> bool:
         """Insert or refresh an item and return whether it is newly discovered."""
+        source_id = str(item["id"])
+        item_id = self._item_key(feed_url, source_id)
         with self._lock:
-            is_new = self.conn.execute(
-                "SELECT 1 FROM items WHERE id=?", (item["id"],)
-            ).fetchone() is None
+            # Upgrade legacy unscoped records as soon as their own feed is
+            # refreshed, preserving read/bookmark state during the migration.
+            legacy = self.conn.execute("SELECT feed FROM items WHERE id=?", (source_id,)).fetchone()
+            if legacy and legacy[0] == feed_url:
+                self.conn.execute("UPDATE OR IGNORE items SET id=? WHERE id=?", (item_id, source_id))
+            is_new = self.conn.execute("SELECT 1 FROM items WHERE id=?", (item_id,)).fetchone() is None
             self.conn.execute("""
                 INSERT INTO items
                     (id,feed,title,link,published,summary,image_url,video_url,video_type,seen,click_count,bookmarked)
@@ -317,7 +334,7 @@ class Store:
                     image_url=COALESCE(excluded.image_url, items.image_url),
                     video_url=COALESCE(excluded.video_url, items.video_url),
                     video_type=COALESCE(excluded.video_type, items.video_type)
-            """, {**item, "feed": feed_url})
+            """, {**item, "id": item_id, "feed": feed_url})
             self.conn.commit()
         return is_new
 

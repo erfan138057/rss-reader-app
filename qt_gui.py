@@ -130,21 +130,32 @@ class ResultSignals(QObject):
 
 
 class ImageJob(QRunnable):
-    def __init__(self, url: str):
+    def __init__(self, url: str, article_url: str = ""):
         super().__init__()
         self.url = url
+        self.article_url = article_url
         self.signals = ImageSignals()
 
     def run(self):
         data = b""
         try:
-            response = httpx.get(self.url, timeout=10, follow_redirects=True,
-                                 headers={"User-Agent": "RSSReaderPro/1.0"})
-            if response.is_success:
-                data = response.content
+            # Some feeds provide no media thumbnail.  Resolve the article's OG
+            # image in the worker thread before showing the card fallback.
+            image_url = self.url or (core.fetch_og_image(self.article_url) if self.article_url else "")
+            if image_url:
+                response = httpx.get(image_url, timeout=10, follow_redirects=True,
+                                     headers={"User-Agent": "RSSReaderPro/1.0"})
+                if response.is_success:
+                    data = response.content
         except Exception:
             pass
-        self.signals.done.emit(data)
+        # A card can be rebuilt or deleted while an image request is still in
+        # flight.  In that case Qt destroys the receiver/signal owner first; the
+        # result is deliberately discarded instead of producing a worker error.
+        try:
+            self.signals.done.emit(data)
+        except RuntimeError:
+            pass
 
 
 class Pulse(QWidget):
@@ -174,25 +185,29 @@ class Pulse(QWidget):
 
 
 class ImageLabel(QLabel):
-    def __init__(self, width: int, height: int, parent=None):
+    def __init__(self, width: int, height: int, source_label: str = "STORY", parent=None):
         super().__init__(parent)
         self.target_size = QSize(width, height)
         self.setMinimumHeight(height)
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet(
             "border-radius: 8px; background: qlineargradient(x1:0,y1:0,x2:1,y2:1, "
-            "stop:0 #254365, stop:1 #15243A); color: #7E9AB7; font-weight: 700;"
+            "stop:0 #254365, stop:1 #15243A); color: #9CB2CB; font-size: 9px; font-weight: 700; letter-spacing: 1px;"
         )
-        self.setText("IMAGE")
+        self.setText(source_label[:28].upper() or "STORY")
 
-    def load(self, url: str):
-        if not url:
+    def load(self, url: str, article_url: str = ""):
+        if not url and not article_url:
             return
-        job = ImageJob(url)
+        job = ImageJob(url, article_url)
+        # Retain the Python wrapper until the worker returns; otherwise a fast
+        # refresh can let Qt auto-delete the signal source while the job is running.
+        self._image_job = job
         job.signals.done.connect(self.set_image)
         QThreadPool.globalInstance().start(job)
 
     def set_image(self, data: bytes):
+        self._image_job = None
         pixmap = QPixmap()
         if data and pixmap.loadFromData(data):
             self.setPixmap(pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
@@ -212,6 +227,10 @@ class ArticleCard(QFrame):
         self.featured = featured
         self.setObjectName("articleCard")
         self.setCursor(Qt.PointingHandCursor)
+        # Every grid tile has a deterministic footprint; asynchronous image loads
+        # and different text lengths can therefore never push the next row over it.
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setFixedHeight(294 if featured else 286)
         self.setStyleSheet(f"""
             QFrame#articleCard {{ background: {C['card_seen'] if item.get('seen') else C['card']};
                                 border: 1px solid {C['line']}; border-radius: 10px; }}
@@ -224,11 +243,12 @@ class ArticleCard(QFrame):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(9)
         image_h = 130 if self.featured else 105
-        self.image = ImageLabel(200, image_h)
+        source_name = urlparse(self.item.get("feed", "")).netloc or "Story"
+        self.image = ImageLabel(200, image_h, source_name)
         self.image.setFixedHeight(image_h)
         layout.addWidget(self.image)
         image_url = self.item.get("image_url") or ""
-        self.image.load(image_url)
+        self.image.load(image_url, self.item.get("link") or "")
 
         top = QHBoxLayout()
         domain = urlparse(self.item.get("feed", "")).netloc.upper() or "RSS READER"
@@ -571,6 +591,24 @@ class MainWindow(QMainWindow):
         elif action == remove:
             self.remove_feed(feed["url"])
 
+    @staticmethod
+    def _clear_layout(layout):
+        """Recursively remove widgets and nested layouts before a feed refresh.
+
+        Removing only direct widgets leaves cards inside old QGridLayouts alive;
+        they remain painted beneath the new grid and look like overlapping stories.
+        """
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            child_layout = item.layout()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+            elif child_layout is not None:
+                MainWindow._clear_layout(child_layout)
+                child_layout.deleteLater()
+
     def refresh_view(self):
         query = self.search.text().strip() if hasattr(self, "search") else ""
         unread_only = self.filters.get("unread", False) or not self.show_read
@@ -580,22 +618,32 @@ class MainWindow(QMainWindow):
             items = self.store.search_items(query, self.active_feed, self.sort, unread_only, self.filters.get("bookmarked", False), self.filters.get("from", ""), self.filters.get("to", ""))
         unseen = sum(1 for item in items if not item.get("seen")); self.subheading.setText(f"{unseen} unread / {len(items)} stories"); self.pulse.set_value(unseen)
         outer = self.content_layout
-        while outer.count():
-            child = outer.takeAt(0)
-            if child.widget(): child.widget().deleteLater()
+        self._clear_layout(outer)
         if not items:
             empty = label("No stories found yet", 14, C["muted"]); empty.setAlignment(Qt.AlignCenter); outer.addWidget(empty); outer.addStretch(1); return
         section = QHBoxLayout(); section.addWidget(label("TOP STORIES", 11, C["text"], True)); section.addWidget(label("A QUICK VIEW OF WHAT MATTERS", 8, C["dim"], True)); section.addStretch(1); outer.addLayout(section)
         featured = QGridLayout(); featured.setSpacing(10)
+        for column in range(3):
+            featured.setColumnStretch(column, 1)
         for idx, item in enumerate(items[:3]):
             card = ArticleCard(item, featured=True); card.opened.connect(self.open_item); card.menu_requested.connect(self.article_menu); featured.addWidget(card, 0, idx)
         outer.addLayout(featured)
-        section2 = QHBoxLayout(); section2.addWidget(label("LATEST STORIES", 11, C["text"], True)); section2.addWidget(label("YOUR LIVE FEED", 8, C["dim"], True)); section2.addStretch(1); outer.addLayout(section2)
-        grid = QGridLayout(); grid.setSpacing(10)
-        remaining = items[3:] or items
-        for idx, item in enumerate(remaining):
-            card = ArticleCard(item, featured=False); card.opened.connect(self.open_item); card.menu_requested.connect(self.article_menu); grid.addWidget(card, idx // 3, idx % 3)
-        outer.addLayout(grid); outer.addStretch(1)
+
+        # Top stories are not duplicated in Latest Stories.  Keeping the two
+        # sections mutually exclusive prevents both visual collisions and content
+        # that appears to have come from the wrong feed.
+        remaining = items[3:]
+        if remaining:
+            section2 = QHBoxLayout(); section2.addWidget(label("LATEST STORIES", 11, C["text"], True)); section2.addWidget(label("YOUR LIVE FEED", 8, C["dim"], True)); section2.addStretch(1); outer.addLayout(section2)
+            grid = QGridLayout(); grid.setSpacing(10)
+            for column in range(3):
+                grid.setColumnStretch(column, 1)
+            for idx, item in enumerate(remaining):
+                row, column = divmod(idx, 3)
+                grid.setRowMinimumHeight(row, 286)
+                card = ArticleCard(item, featured=False); card.opened.connect(self.open_item); card.menu_requested.connect(self.article_menu); grid.addWidget(card, row, column)
+            outer.addLayout(grid)
+        outer.addStretch(1)
 
     def open_item(self, item):
         self.focused_item = item; self.store.mark_seen(item["id"]); item["seen"] = 1; self.refresh_view(); DetailDialog(item, self).exec()
