@@ -15,8 +15,10 @@ from functools import partial
 from urllib.parse import urlparse
 
 import httpx
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject, QRunnable, QThreadPool, QDate
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject, QRunnable, QThreadPool, QDate, QUrl
 from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap, QAction, QShortcut
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QFrame, QLabel, QPushButton, QToolButton,
     QLineEdit, QScrollArea, QVBoxLayout, QHBoxLayout, QGridLayout, QDialog,
@@ -318,6 +320,68 @@ class ArticleCard(QFrame):
         super().mousePressEvent(event)
 
 
+class VideoDialog(QDialog):
+    """Native in-app playback for direct media URLs, without a VLC dependency."""
+    def __init__(self, url: str, title: str, parent=None):
+        super().__init__(parent)
+        self.url = url
+        self.setWindowTitle(t("video_title"))
+        self.resize(900, 560)
+        self.setWindowIcon(app_icon())
+        layout = QVBoxLayout(self)
+        heading = label(title or t("video_title"), 14, C["text"], True)
+        heading.setWordWrap(True)
+        layout.addWidget(heading)
+        self.video = QVideoWidget(self)
+        self.video.setMinimumHeight(400)
+        self.video.setStyleSheet(f"background: {C['sidebar']}; border-radius: 8px;")
+        layout.addWidget(self.video, 1)
+        self.message = label("", 9, C["muted"])
+        self.message.setWordWrap(True)
+        layout.addWidget(self.message)
+        controls = QHBoxLayout()
+        self.play_pause = button("Pause", "primary")
+        self.play_pause.clicked.connect(self.toggle_playback)
+        controls.addWidget(self.play_pause)
+        system = button(t("video_fallback"), "darkButton")
+        system.clicked.connect(lambda: open_system_video(self.url, self._player_path()))
+        controls.addWidget(system)
+        controls.addStretch(1)
+        close = button("Close", "darkButton")
+        close.clicked.connect(self.close)
+        controls.addWidget(close)
+        layout.addLayout(controls)
+        self.audio = QAudioOutput(self)
+        self.audio.setVolume(0.85)
+        self.player = QMediaPlayer(self)
+        self.player.setAudioOutput(self.audio)
+        self.player.setVideoOutput(self.video)
+        self.player.errorOccurred.connect(self.on_error)
+        self.player.playbackStateChanged.connect(self.on_state_changed)
+        self.player.setSource(QUrl(self.url))
+        self.player.play()
+
+    def _player_path(self) -> str:
+        return getattr(self.parent(), "settings", {}).get("external_player_path", "")
+
+    def toggle_playback(self):
+        if self.player.playbackState() == QMediaPlayer.PlayingState:
+            self.player.pause()
+        else:
+            self.player.play()
+
+    def on_state_changed(self, state):
+        self.play_pause.setText("Pause" if state == QMediaPlayer.PlayingState else "Play")
+
+    def on_error(self, _error, message):
+        self.message.setText("This source cannot be played internally. Use the system player for this video.\n" + message)
+        self.play_pause.setEnabled(False)
+
+    def closeEvent(self, event):
+        self.player.stop()
+        super().closeEvent(event)
+
+
 class DetailDialog(QDialog):
     def __init__(self, item: dict, parent=None):
         super().__init__(parent)
@@ -342,15 +406,26 @@ class DetailDialog(QDialog):
         open_btn.clicked.connect(lambda: webbrowser.open(self.item.get("link", "")))
         bar.addWidget(open_btn)
         if self.item.get("video_url"):
-            vid = button("Play video", "darkButton")
-            player_path = getattr(parent, "settings", {}).get("external_player_path", "") if parent else ""
-            vid.clicked.connect(lambda: open_system_video(self.item.get("video_url"), player_path))
+            vid = button(t("play_video"), "darkButton")
+            vid.clicked.connect(self.open_video)
             bar.addWidget(vid)
         bar.addStretch(1)
         close = button("Close")
         close.clicked.connect(self.accept)
         bar.addWidget(close)
         layout.addLayout(bar)
+
+    def open_video(self):
+        parent_settings = getattr(self.parent(), "settings", {})
+        internal = parent_settings.get("video_playback_mode", "in_app") == "in_app"
+        if internal and self.item.get("video_type") == "direct":
+            self._video_dialog = VideoDialog(self.item.get("video_url", ""), self.item.get("title", ""), self)
+            self._video_dialog.setWindowModality(Qt.WindowModal)
+            self._video_dialog.show()
+            self._video_dialog.raise_()
+            self._video_dialog.activateWindow()
+        else:
+            open_system_video(self.item.get("video_url", ""), parent_settings.get("external_player_path", ""))
 
     def open_reader(self):
         dlg = ReaderDialog(self.item, self)
@@ -438,6 +513,7 @@ class SettingsDialog(QDialog):
         self.font_size.setCurrentText(str(settings.get("font_size", 9)))
         self.images = QCheckBox(t("img_load_label")); self.images.setChecked(settings.get("load_images", True))
         self.notifications = QCheckBox(t("notifications_label")); self.notifications.setChecked(settings.get("notifications", True))
+        self.internal_video = QCheckBox(t("video_internal")); self.internal_video.setChecked(settings.get("video_playback_mode", "in_app") == "in_app")
         self.player = QLineEdit(settings.get("external_player_path", "")); self.player.setPlaceholderText("Optional custom media-player path")
         self.interval = QComboBox(); self.interval.addItems(["0", "60", "300", "900", "1800"])
         self.interval.setCurrentText(str(settings.get("check_interval", config.CHECK_INTERVAL)))
@@ -445,7 +521,7 @@ class SettingsDialog(QDialog):
         self.scroll_speed.setCurrentText(str(settings.get("auto_scroll_speed", 2)))
         form.addRow(t("lang_label"), self.language); form.addRow(t("theme_label"), self.theme); form.addRow(t("font_size_label"), self.font_size)
         form.addRow(t("interval_label"), self.interval); form.addRow(t("auto_scroll_speed"), self.scroll_speed)
-        form.addRow(self.images); form.addRow(self.notifications); form.addRow(t("video_player_path"), self.player)
+        form.addRow(self.images); form.addRow(self.notifications); form.addRow(self.internal_video); form.addRow(t("video_player_path"), self.player)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept); buttons.rejected.connect(self.reject)
         form.addRow(buttons)
@@ -455,7 +531,9 @@ class SettingsDialog(QDialog):
         out.update({"language": "fa" if self.language.currentIndex() else "en", "theme": "dark",
                     "font_size": int(self.font_size.currentText()), "check_interval": int(self.interval.currentText()),
                     "auto_scroll_speed": int(self.scroll_speed.currentText()), "load_images": self.images.isChecked(),
-                    "notifications": self.notifications.isChecked(), "external_player_path": self.player.text().strip()})
+                    "notifications": self.notifications.isChecked(),
+                    "video_playback_mode": "in_app" if self.internal_video.isChecked() else "system",
+                    "external_player_path": self.player.text().strip()})
         return out
 
 
@@ -592,9 +670,11 @@ class MainWindow(QMainWindow):
         self.active_feed = url
         self.heading.setText(t("all_news") if url is None else urlparse(url).netloc)
         self.bookmarks_btn.setChecked(False); self.all_btn.setChecked(url is None)
-        self.refresh_all(); self.refresh_view()
+        self.refresh_all()
         if url:
-            self.fetch_feed_async(url)
+            # A user-selected feed refreshes quietly; it must not cause a native
+            # notification or a transient OS surface every time it is clicked.
+            self.fetch_feed_async(url, notify=False)
 
     def show_bookmarks(self):
         self.active_feed = "__bookmarks__"; self.heading.setText(t("bookmarks")); self.bookmarks_btn.setChecked(True); self.all_btn.setChecked(False); self.refresh_all(); self.refresh_view()
@@ -638,7 +718,10 @@ class MainWindow(QMainWindow):
             widget = item.widget()
             child_layout = item.layout()
             if widget is not None:
-                widget.setParent(None)
+                # Do not detach a visible card before deferred deletion.  Qt turns
+                # detached widgets into transient top-level windows for one event
+                # loop turn, which produced the flash reported when selecting feeds.
+                widget.hide()
                 widget.deleteLater()
             elif child_layout is not None:
                 MainWindow._clear_layout(child_layout)
@@ -833,9 +916,9 @@ class MainWindow(QMainWindow):
             self.bridge.loaded.emit()
         threading.Thread(target=worker, daemon=True).start()
 
-    def fetch_feed_async(self, url):
+    def fetch_feed_async(self, url, notify: bool = False):
         feed = next((f for f in self.store.get_feeds() if f["url"] == url), {})
-        threading.Thread(target=lambda: (self.fetch_feed_data(url, feed.get("title") or url, True), self.bridge.loaded.emit()), daemon=True).start()
+        threading.Thread(target=lambda: (self.fetch_feed_data(url, feed.get("title") or url, notify), self.bridge.loaded.emit()), daemon=True).start()
 
     def fetch_feed_data(self, url, title, notify):
         items = core.fetch_feed(url); fresh = [item for item in items if self.store.upsert(item, url)]

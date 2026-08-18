@@ -32,6 +32,11 @@ jobs:
           python -m pip install pyinstaller
           python -m pip install -r requirements.txt
 
+      - name: Run core and Qt regression tests
+        run: |
+          python -m unittest -q test_core.py
+          QT_QPA_PLATFORM=offscreen python -m unittest -q test_qt_gui.py
+
       - name: Build portable Linux executable
         run: |
           python -m PyInstaller --noconfirm --clean --onefile --windowed \

@@ -16,6 +16,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+    - name: Run core and Qt regression tests
+      shell: pwsh
+      run: |
+        python -m unittest -q test_core.py
+        $env:QT_QPA_PLATFORM = "offscreen"
+        python -m unittest -q test_qt_gui.py
     - name: Build with PyInstaller
       run: |
         # PyInstaller را با استفاده از ماژول پایتون اجرا می‌کنیم تا مسیر آن به درستی پیدا شود.

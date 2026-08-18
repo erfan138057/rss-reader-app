@@ -85,9 +85,11 @@ DEFAULTS = {
     "load_images":    True,
     "font_size":      9,
     "card_style":     "telegram",
-    # VLC تنها برای پخش داخلی اختیاری است؛ پخش پیش‌فرض با پلیر پیش‌فرض سیستم انجام می‌شود.
-    "video_internal": False,
-    "external_player_path": "",  # مسیر اختیاری پلیر دلخواه کاربر؛ در حالت خالی از پلیر پیش‌فرض سیستم استفاده می‌شود.
+    # Direct video uses the native Qt player inside the application by default.
+    # Unsupported providers remain delegated to the user's system player.
+    "video_playback_mode": "in_app",
+    "video_internal": False,  # legacy Tkinter default remains system-player based
+    "external_player_path": "",  # optional user-selected system player path
     "dns_auto":       False,
     "notifications":  True,
     "auto_scroll":    False,

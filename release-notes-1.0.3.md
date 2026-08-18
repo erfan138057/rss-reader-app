@@ -31,9 +31,15 @@ The packaged Qt application now uses the official Signal Midnight icon on its ap
 
 The Windows workflow is prepared for Microsoft Artifact Signing with SHA-256 and RFC 3161 timestamping. The protected signing step activates after the owner configures the required Azure identity, account and certificate-profile settings. See `docs/SMARTSCREEN.md` for the configuration and the reputation-based behavior of SmartScreen.
 
+## Regression fixes
+
+Selecting a feed no longer detaches cards into temporary top-level widgets during the visual refresh, eliminating the short-lived flashing surface reported by users. The selected-feed refresh is now quiet and does not issue a new-item notification solely because the user chose a feed.
+
+Direct MP4 and other compatible direct media now open in the native Qt player inside the application. The player includes play/pause, native audio/video output, an explanatory in-app error state and a deliberate fallback button for the user’s system player. Provider pages such as YouTube, Vimeo and Redgifs remain delegated to the system handler because they are not direct media streams.
+
 ## Quality checks
 
-The release passed Python compilation checks and nine automated tests covering video detection, image/cache helpers, feed isolation, categories, unread state, advanced filters, popularity sorting, OPML transfer and bookmark export. The portable Linux archive was built with PyInstaller, checked for the required bundled XCB dependencies, smoke-tested with Qt's offscreen platform and inspected after packaging.
+The release passed Python compilation checks, nine core automated tests and two Qt regression tests covering feed selection, browser/tab suppression and in-app video player routing. A separate headless behavioral check starts playback of a real public direct MP4 in the native Qt player. The portable Linux archive was built with PyInstaller, checked for the required bundled XCB dependencies, smoke-tested with Qt's offscreen platform and inspected after packaging.
 
 ## Upgrade
 
