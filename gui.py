@@ -1048,6 +1048,97 @@ class NewsCard(tk.Frame):
                 break
 
 # ---------------------------------------------------------------------------
+# Top Story Card — featured horizontal storytelling layer
+# ---------------------------------------------------------------------------
+class TopStoryCard(tk.Frame):
+    IW, IH = 190, 96
+
+    def __init__(self, master, item, on_click, on_context=None, load_images=True, **kw):
+        super().__init__(master, bg=C["card"], cursor="hand2", highlightthickness=1,
+                         highlightbackground=C["reddit_border"], **kw)
+        self.item = item
+        self.on_click = on_click
+        self.on_context = on_context
+        self._photo = None
+        self._ph = make_placeholder(self.IW, self.IH)
+        self._build()
+        self._bind_all()
+        if load_images:
+            self._load_img_async()
+
+    def _build(self):
+        image_frame = tk.Frame(self, bg=C["card"])
+        image_frame.pack(fill="x", padx=1, pady=1)
+        self.img_lbl = tk.Label(image_frame, image=self._ph, bg=C["card"],
+                                width=self.IW, height=self.IH)
+        self.img_lbl.image = self._ph
+        self.img_lbl.pack(fill="x")
+        body = tk.Frame(self, bg=C["card"])
+        body.pack(fill="both", expand=True, padx=10, pady=9)
+        label = "BREAKING NEWS" if not self.item.get("seen") else "TOP STORY"
+        tk.Label(body, text=label, font=F["tag"], fg=C["breaking"] if not self.item.get("seen") else C["accent"],
+                 bg=C["card"]).pack(anchor="w")
+        tk.Label(body, text=self.item.get("title", ""), font=F["title"], fg=C["text_primary"],
+                 bg=C["card"], anchor="w", justify="left", wraplength=185).pack(anchor="w", pady=(4, 0))
+        from urllib.parse import urlparse as up
+        domain = up(self.item.get("feed", "")).netloc
+        tk.Label(body, text=domain.upper()[:22] or "RSS READER", font=F["meta"],
+                 fg=C["text_secondary"], bg=C["card"]).pack(anchor="w", pady=(8, 0))
+        for widget in (self, image_frame, self.img_lbl, body):
+            widget.bind("<Button-1>", self._clicked)
+            widget.bind("<Button-3>", self._context)
+            widget.bind("<Enter>", lambda e: self._paint(C["card_hover"]))
+            widget.bind("<Leave>", lambda e: self._paint(C["card"]))
+        for widget in body.winfo_children():
+            widget.bind("<Button-1>", self._clicked)
+            widget.bind("<Button-3>", self._context)
+            widget.bind("<Enter>", lambda e: self._paint(C["card_hover"]))
+            widget.bind("<Leave>", lambda e: self._paint(C["card"]))
+
+    def _paint(self, color):
+        self.configure(bg=color)
+        def walk(widget):
+            for child in widget.winfo_children():
+                try: child.configure(bg=color)
+                except: pass
+                walk(child)
+        walk(self)
+
+    def _bind_all(self):
+        self.bind("<Button-1>", self._clicked)
+        self.bind("<Button-3>", self._context)
+
+    def _clicked(self, event=None):
+        self.on_click(self.item)
+
+    def _context(self, event):
+        if self.on_context:
+            self.on_context(event, self.item)
+            return "break"
+
+    def _load_img_async(self):
+        def worker():
+            url = self.item.get("image_url", "")
+            data = core.fetch_image_bytes(url) if url else b""
+            if not data and self.item.get("link"):
+                og = core.fetch_og_image(self.item["link"])
+                if og:
+                    self.item["image_url"] = og
+                    data = core.fetch_image_bytes(og)
+            if data:
+                photo = resize_image(data, self.IW, self.IH)
+                if photo:
+                    self.after(0, self._set_image, photo)
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _set_image(self, photo):
+        self._photo = photo
+        try:
+            self.img_lbl.configure(image=photo)
+            self.img_lbl.image = photo
+        except: pass
+
+# ---------------------------------------------------------------------------
 # Reddit Card
 # ---------------------------------------------------------------------------
 class RedditCard(tk.Frame):
@@ -1246,17 +1337,22 @@ class RSSApp:
 
     def _apply_ttk_style(self):
         s = ttk.Style(); s.theme_use("clam")
-        s.configure("TScrollbar", background=C["sidebar"],
-                     troughcolor=C["bg"], arrowcolor=C["text_secondary"])
+        s.configure("TScrollbar", background=C["surface2"], troughcolor=C["bg"],
+                     arrowcolor=C["text_secondary"], bordercolor=C["separator"], lightcolor=C["surface2"], darkcolor=C["surface2"])
+        s.configure("TCombobox", fieldbackground=C["surface2"], background=C["surface2"],
+                     foreground=C["text_primary"], arrowcolor=C["text_secondary"],
+                     bordercolor=C["separator"], selectbackground=C["accent"], selectforeground=C["sidebar"])
+        s.map("TCombobox", fieldbackground=[("readonly", C["surface2"])],
+              background=[("readonly", C["surface2"])], foreground=[("readonly", C["text_primary"])])
 
     # ── Layout ──
     def _build(self):
         self.root.title(t("app_title"))
         self.root.configure(bg=C["bg"])
-        self.root.minsize(1120, 680)
+        self.root.minsize(1180, 680)
 
-        # Signal Modular uses a quiet navigation rail and a spacious central workspace.
-        self.sidebar = tk.Frame(self.root, bg=C["sidebar"], width=224,
+        # Signal Modular keeps navigation compact to prioritize the content canvas.
+        self.sidebar = tk.Frame(self.root, bg=C["sidebar"], width=196,
                                 highlightthickness=0)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
@@ -1422,8 +1518,16 @@ class RSSApp:
                      insertbackground=C["text_primary"]).pack(side="left", padx=(0, 4), ipady=3)
             variable.trace_add("write", lambda *args: self._reload())
 
-        self._content = tk.Frame(shell, bg=C["bg"])
-        self._content.pack(fill="both", expand=True)
+        workspace = tk.Frame(shell, bg=C["bg"])
+        workspace.pack(fill="both", expand=True)
+        # Pack the fixed insight rail first so the central feed cannot consume its width.
+        self._insight = tk.Frame(workspace, bg=C["panel"], width=186,
+                                 highlightthickness=1, highlightbackground=C["separator"])
+        self._insight.pack(side="right", fill="y", padx=(14, 0))
+        self._insight.pack_propagate(False)
+        self._content = tk.Frame(workspace, bg=C["bg"])
+        self._content.pack(side="left", fill="both", expand=True)
+        self._build_insight_panel()
         self._build_content_area()
 
         sb = tk.Frame(self.main, bg=C["sidebar"], highlightthickness=1,
@@ -1441,6 +1545,40 @@ class RSSApp:
             self._filters_wrap.pack_forget()
         else:
             self._filters_wrap.pack(fill="x", pady=(0, 10), before=self._content)
+
+    def _build_insight_panel(self):
+        tk.Label(self._insight, text="SIGNAL", font=F["btn"], fg=C["text_primary"],
+                 bg=C["panel"]).pack(anchor="w", padx=15, pady=(16, 2))
+        tk.Label(self._insight, text="YOUR READING PULSE", font=F["meta"], fg=C["text_seen"],
+                 bg=C["panel"]).pack(anchor="w", padx=15)
+        ring = tk.Canvas(self._insight, width=90, height=90, bg=C["panel"],
+                         highlightthickness=0)
+        ring.pack(pady=(16, 6))
+        ring.create_oval(12, 12, 78, 78, outline=C["separator"], width=7)
+        ring.create_arc(12, 12, 78, 78, start=90, extent=250, style="arc",
+                        outline=C["accent"], width=7)
+        self._insight_count = ring.create_text(45, 40, text="0", fill=C["text_primary"],
+                                               font=("Segoe UI", 16, "bold"))
+        ring.create_text(45, 59, text="UNREAD", fill=C["text_seen"], font=F["meta"])
+        self._insight_ring = ring
+        tk.Frame(self._insight, height=1, bg=C["separator"]).pack(fill="x", padx=15, pady=12)
+        tk.Label(self._insight, text="TOPICS", font=F["meta"], fg=C["text_seen"],
+                 bg=C["panel"]).pack(anchor="w", padx=15, pady=(0, 7))
+        self._topic_box = tk.Frame(self._insight, bg=C["panel"])
+        self._topic_box.pack(fill="x", padx=13)
+        for topic in ("World", "Technology", "Business", "Culture"):
+            tk.Label(self._topic_box, text=topic, font=F["meta"], bg=C["surface2"],
+                     fg=C["text_secondary"], padx=8, pady=5).pack(fill="x", pady=3)
+        tk.Frame(self._insight, height=1, bg=C["separator"]).pack(fill="x", padx=15, pady=14)
+        tk.Label(self._insight, text="TIP", font=F["meta"], fg=C["text_seen"],
+                 bg=C["panel"]).pack(anchor="w", padx=15)
+        tk.Label(self._insight, text="Save stories to build your reading queue.", font=F["body"],
+                 fg=C["text_secondary"], bg=C["panel"], wraplength=148, justify="left").pack(anchor="w", padx=15, pady=(5, 0))
+
+    def _update_insight_panel(self, items):
+        if hasattr(self, "_insight_ring"):
+            unread = sum(1 for item in items if not item.get("seen"))
+            self._insight_ring.itemconfigure(self._insight_count, text=str(unread))
 
     def _build_content_area(self):
         for w in self._content.winfo_children(): w.destroy()
@@ -1550,18 +1688,35 @@ class RSSApp:
                 card.pack(fill="x", padx=4, pady=2)
                 self._cards.append(card)
         else:
-            # Signal Modular: a visual grid makes scanning news feel intentional, not cramped.
+            featured = items[:3]
+            remaining = items[3:] or items
             section = tk.Frame(self._sf.inner, bg=C["bg"])
-            section.pack(fill="x", padx=2, pady=(2, 10))
+            section.pack(fill="x", padx=2, pady=(2, 9))
             tk.Label(section, text="TOP STORIES", font=F["btn"], fg=C["text_primary"],
                      bg=C["bg"]).pack(side="left")
-            tk.Label(section, text="CURATED FROM YOUR FEEDS", font=F["meta"],
+            tk.Label(section, text="A QUICK VIEW OF WHAT MATTERS", font=F["meta"],
                      fg=C["text_seen"], bg=C["bg"]).pack(side="left", padx=10)
+            featured_grid = tk.Frame(self._sf.inner, bg=C["bg"])
+            featured_grid.pack(fill="x", pady=(0, 18))
+            for col in range(3):
+                featured_grid.grid_columnconfigure(col, weight=1, uniform="featured")
+            for col, item in enumerate(featured):
+                card = TopStoryCard(featured_grid, item, on_click=self._open_item,
+                                    on_context=self._show_card_menu, load_images=load_img)
+                card.grid(row=0, column=col, sticky="nsew", padx=4)
+                self._cards.append(card)
+
+            latest_label = tk.Frame(self._sf.inner, bg=C["bg"])
+            latest_label.pack(fill="x", padx=2, pady=(0, 8))
+            tk.Label(latest_label, text="LATEST STORIES", font=F["btn"], fg=C["text_primary"],
+                     bg=C["bg"]).pack(side="left")
+            tk.Label(latest_label, text="YOUR LIVE FEED", font=F["meta"], fg=C["text_seen"],
+                     bg=C["bg"]).pack(side="left", padx=10)
             grid = tk.Frame(self._sf.inner, bg=C["bg"])
             grid.pack(fill="both", expand=True)
             grid.grid_columnconfigure(0, weight=1, uniform="signal")
             grid.grid_columnconfigure(1, weight=1, uniform="signal")
-            for index, item in enumerate(items):
+            for index, item in enumerate(remaining):
                 card = NewsCard(grid, item, on_click=self._open_item,
                                  on_context=self._show_card_menu, load_images=load_img)
                 card.set_store(self.store)
@@ -1571,6 +1726,7 @@ class RSSApp:
 
         total  = len(items)
         unseen = sum(1 for i in items if not i.get("seen"))
+        self._update_insight_panel(items)
         self._hdr_count.configure(
             text=t("unread_of", unread=unseen, total=total) if unseen
             else t("n_articles", n=total))
