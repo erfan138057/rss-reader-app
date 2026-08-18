@@ -24,7 +24,7 @@ jobs:
       - name: Install Qt platform dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1
+          sudo apt-get install -y libasound2 libegl1 libgl1 libpulse0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1
 
       - name: Install dependencies
         run: |
