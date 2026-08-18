@@ -902,8 +902,8 @@ class LogWindow(tk.Toplevel):
 # News Card (Telegram style)
 # ---------------------------------------------------------------------------
 class NewsCard(tk.Frame):
-    # Signal Modular cards are intentionally spacious enough for scanning at a glance.
-    TW, TH = 132, 92
+    # Latest-story cards use an image-first editorial tile, matching the reference rhythm.
+    TW, TH = 210, 94
 
     def __init__(self, master, item, on_click, on_context=None, load_images=True, **kw):
         seen = bool(item.get("seen"))
@@ -925,52 +925,41 @@ class NewsCard(tk.Frame):
         tc = C["text_seen"] if seen else C["text_primary"]
         mc = C["text_seen"] if seen else C["text_secondary"]
         self.configure(highlightthickness=1, highlightbackground=C["reddit_border"], highlightcolor=C["accent"])
-
         inner = tk.Frame(self, bg=self._bg)
         inner.pack(fill="both", expand=True, padx=1, pady=1)
-        accent = C["accent"] if not seen else C["separator"]
-        tk.Frame(inner, height=3, bg=accent).pack(fill="x")
-        body = tk.Frame(inner, bg=self._bg)
-        body.pack(fill="both", expand=True, padx=12, pady=12)
-
-        self.img_lbl = tk.Label(body, bg=self._bg, image=self._ph, width=self.TW, height=self.TH)
+        self.img_lbl = tk.Label(inner, bg=self._bg, image=self._ph, width=self.TW, height=self.TH)
         self.img_lbl.image = self._ph
-        self.img_lbl.pack(side="left", padx=(0, 12), anchor="n")
-
-        copy = tk.Frame(body, bg=self._bg)
-        copy.pack(side="left", fill="both", expand=True, anchor="n")
+        self.img_lbl.pack(fill="x", padx=1, pady=1)
+        body = tk.Frame(inner, bg=self._bg)
+        body.pack(fill="both", expand=True, padx=10, pady=9)
         from urllib.parse import urlparse as up
         domain = up(self.item.get("feed", "")).netloc
-        eyebrow = tk.Frame(copy, bg=self._bg)
-        eyebrow.pack(fill="x", anchor="w", pady=(0, 5))
+        eyebrow = tk.Frame(body, bg=self._bg)
+        eyebrow.pack(fill="x", pady=(0, 5))
         if not seen:
-            tk.Label(eyebrow, text="●  UNREAD", font=F["tag"], fg=C["accent"],
-                     bg=self._bg).pack(side="left")
-        if domain:
-            tk.Label(eyebrow, text=("  " if not seen else "   ") + domain.upper()[:22],
-                     font=F["meta"], fg=mc, bg=self._bg).pack(side="left")
+            tk.Label(eyebrow, text="●", font=F["body"], fg=C["accent"], bg=self._bg).pack(side="left")
+        tk.Label(eyebrow, text=("  " if not seen else "") + (domain.upper()[:22] or "RSS READER"),
+                 font=F["meta"], fg=mc, bg=self._bg).pack(side="left")
         if self.item.get("video_url"):
-            tk.Label(eyebrow, text="  ▶", font=F["meta"], fg=C["tag_video_fg"],
-                     bg=self._bg).pack(side="left")
-
-        tk.Label(copy, text=self.item.get("title", ""), font=F["title"], fg=tc,
-                 bg=self._bg, anchor="w", justify="left", wraplength=260).pack(anchor="w")
+            tk.Label(eyebrow, text="  ▶", font=F["meta"], fg=C["tag_video_fg"], bg=self._bg).pack(side="left")
+        tk.Label(body, text=self.item.get("title", ""), font=F["title"], fg=tc,
+                 bg=self._bg, anchor="w", justify="left", wraplength=220).pack(anchor="w")
         sm = self.item.get("summary", "")
         if sm:
-            tk.Label(copy, text=sm[:100] + ("…" if len(sm) > 100 else ""), font=F["body"],
-                     fg=mc, bg=self._bg, anchor="w", justify="left", wraplength=265).pack(anchor="w", pady=(4, 0))
+            tk.Label(body, text=sm[:72] + ("…" if len(sm) > 72 else ""), font=F["body"],
+                     fg=mc, bg=self._bg, anchor="w", justify="left", wraplength=220).pack(anchor="w", pady=(5, 0))
+        footer = tk.Frame(body, bg=self._bg)
+        footer.pack(fill="x", pady=(9, 0))
         pub = self.item.get("published", "")[:16]
-        tk.Label(copy, text=f"{pub}  ·  {domain}" if domain else pub, font=F["meta"],
-                 fg=mc, bg=self._bg, anchor="w").pack(anchor="w", pady=(7, 0))
-
+        tk.Label(footer, text=pub, font=F["meta"], fg=mc, bg=self._bg).pack(side="left")
         is_bm = bool(self.item.get("bookmarked"))
-        bm_btn = tk.Button(body, text="▮" if is_bm else "▯", font=("Segoe UI", 13),
+        bm_btn = tk.Button(footer, text="▮" if is_bm else "▯", font=("Segoe UI", 12),
                            bg=self._bg, fg=C["warning"] if is_bm else C["text_seen"], relief="flat",
-                           padx=3, pady=2, command=self._toggle_bookmark)
-        bm_btn.pack(side="right", anchor="n")
+                           borderwidth=0, highlightthickness=0, padx=2, pady=0, command=self._toggle_bookmark)
+        bm_btn.pack(side="right")
         self._bm_btn = bm_btn
-        for w in (inner, body, copy, eyebrow, self.img_lbl): self._bw(w)
-        for w in copy.winfo_children() + eyebrow.winfo_children(): self._bw(w)
+        for w in (inner, body, eyebrow, footer, self.img_lbl): self._bw(w)
+        for w in body.winfo_children() + eyebrow.winfo_children() + footer.winfo_children(): self._bw(w)
 
     def _bw(self, w):
         w.bind("<Button-1>", self._clicked)
@@ -1411,13 +1400,8 @@ class RSSApp:
 
         utility = tk.Frame(self.sidebar, bg=C["sidebar"])
         utility.pack(fill="x", padx=12, pady=(8, 2))
-        for label_key, cmd in [("mark_all_read", self._mark_all_read),
-                               ("import_opml", self._import_opml),
-                               ("export_opml", self._export_opml),
-                               ("export_bookmarks", self._export_bookmarks),
-                               ("dns_scanner", self._open_dns),
-                               ("log", self._open_log)]:
-            self._sb_btn(utility, t(label_key), cmd, compact=True)
+        _btn(utility, "⋯  More tools", self._show_more_tools, bg=C["surface2"],
+             fg=C["text_secondary"], padx=9, pady=5).pack(fill="x")
 
         bot = tk.Frame(self.sidebar, bg=C["sidebar"], highlightthickness=1,
                        highlightbackground=C["separator"])
@@ -1428,6 +1412,21 @@ class RSSApp:
         self._net_side_lbl = tk.Label(bot, text="● " + t("net_checking"), font=F["meta"],
                                       fg=C["success"], bg=C["sidebar"])
         self._net_side_lbl.pack(anchor="w", padx=10, pady=(0, 7))
+
+    def _show_more_tools(self):
+        menu = tk.Menu(self.root, tearoff=0, bg=C["card"], fg=C["text_primary"],
+                       activebackground=C["accent"], activeforeground=C["sidebar"])
+        for label_key, cmd in [("mark_all_read", self._mark_all_read),
+                               ("import_opml", self._import_opml),
+                               ("export_opml", self._export_opml),
+                               ("export_bookmarks", self._export_bookmarks),
+                               ("dns_scanner", self._open_dns),
+                               ("log", self._open_log)]:
+            menu.add_command(label=t(label_key), command=cmd)
+        try:
+            menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
+        finally:
+            menu.grab_release()
 
     def _sb_btn(self, parent, text, cmd, selected=False, compact=False):
         bg = C["active_feed"] if selected else C["sidebar"]
@@ -1459,10 +1458,11 @@ class RSSApp:
         actions = tk.Frame(self._hdr, bg=C["bg"])
         actions.pack(side="right", pady=4)
         self._auto_scroll_var = tk.BooleanVar(value=self._settings.get("auto_scroll", False))
-        tk.Checkbutton(actions, text=t("auto_scroll"), variable=self._auto_scroll_var,
-                       command=self._toggle_auto_scroll, font=F["meta"], fg=C["text_secondary"],
-                       bg=C["bg"], selectcolor=C["input_bg"], activebackground=C["bg"],
-                       activeforeground=C["text_primary"]).pack(side="left", padx=8)
+        auto_enabled = self._auto_scroll_var.get()
+        self._auto_scroll_btn = _btn(actions, ("✓  " if auto_enabled else "□  ") + t("auto_scroll"),
+                                     self._toggle_auto_scroll_ui, bg=C["surface2"],
+                                     fg=C["text_primary"] if auto_enabled else C["text_secondary"], padx=9, pady=5)
+        self._auto_scroll_btn.pack(side="left", padx=6)
         _btn(actions, "✓  " + t("mark_all_read"), self._mark_all_read,
              bg=C["surface2"], fg=C["text_primary"], padx=10, pady=5).pack(side="left", padx=4)
 
@@ -1483,21 +1483,26 @@ class RSSApp:
         toolbar = tk.Frame(shell, bg=C["bg"])
         toolbar.pack(fill="x", pady=(0, 12))
         self._view_var = tk.StringVar(value=self._view_mode)
+        segmented = tk.Frame(toolbar, bg=C["surface2"], highlightthickness=1,
+                             highlightbackground=C["separator"])
+        segmented.pack(side="left")
+        self._view_buttons = {}
         for lbl, val in [("All stories", "telegram"), ("Timeline", "reddit")]:
-            tk.Radiobutton(toolbar, text=lbl, value=val, variable=self._view_var,
-                           font=F["btn"], fg=C["text_primary"], bg=C["surface2"],
-                           selectcolor=C["accent"], activebackground=C["surface2"],
-                           activeforeground=C["text_primary"], indicatoron=0, borderwidth=0,
-                           highlightthickness=0, padx=10, pady=5,
-                           command=self._switch_view).pack(side="left", padx=(0, 7))
+            btn = _btn(segmented, lbl, lambda value=val: self._choose_view(value),
+                       bg=C["accent"] if self._view_mode == val else C["surface2"],
+                       fg=C["sidebar"] if self._view_mode == val else C["text_secondary"], padx=11, pady=5)
+            btn.pack(side="left", padx=1, pady=1)
+            self._view_buttons[val] = btn
         self._show_read_var = tk.BooleanVar(value=self._settings.get("show_read", True))
-        tk.Checkbutton(toolbar, text=t("show_read"), variable=self._show_read_var,
-                       font=F["meta"], fg=C["text_secondary"], bg=C["bg"],
-                       selectcolor=C["input_bg"], activebackground=C["bg"], command=self._reload).pack(side="left", padx=8)
+        read_enabled = self._show_read_var.get()
+        self._show_read_btn = _btn(toolbar, ("✓  " if read_enabled else "□  ") + t("show_read"),
+                                   self._toggle_show_read, bg=C["bg"],
+                                   fg=C["text_secondary"] if read_enabled else C["text_seen"], padx=9, pady=5)
+        self._show_read_btn.pack(side="left", padx=10)
         self._sort_var = tk.StringVar(value=self._settings.get("sort", "newest"))
-        ttk.Combobox(toolbar, textvariable=self._sort_var, width=15, state="readonly",
-                     values=[t("sort_newest"), t("sort_oldest"), t("sort_popularity")]).pack(side="right")
-        self._sort_var.trace_add("write", lambda *a: self._reload())
+        self._sort_btn = _btn(toolbar, self._sort_caption(), self._show_sort_menu,
+                              bg=C["surface2"], fg=C["text_primary"], padx=9, pady=5)
+        self._sort_btn.pack(side="right")
         tk.Label(toolbar, text="SORT", font=F["meta"], fg=C["text_seen"], bg=C["bg"]).pack(side="right", padx=7)
 
         self._filters_wrap = tk.Frame(shell, bg=C["panel"], highlightthickness=1,
@@ -1539,6 +1544,47 @@ class RSSApp:
         self._net_lbl = tk.Label(sb, text="●  ...", font=F["meta"], fg=C["success"],
                                  bg=C["sidebar"], anchor="e")
         self._net_lbl.pack(side="right", padx=16, pady=6)
+
+    def _choose_view(self, value):
+        self._view_var.set(value)
+        for key, button in self._view_buttons.items():
+            active = key == value
+            button.configure(bg=C["accent"] if active else C["surface2"],
+                             fg=C["sidebar"] if active else C["text_secondary"])
+        self._switch_view()
+
+    def _toggle_show_read(self):
+        self._show_read_var.set(not self._show_read_var.get())
+        enabled = self._show_read_var.get()
+        self._show_read_btn.configure(text=("✓  " if enabled else "□  ") + t("show_read"),
+                                      fg=C["text_primary"] if enabled else C["text_seen"])
+        self._reload()
+
+    def _toggle_auto_scroll_ui(self):
+        self._auto_scroll_var.set(not self._auto_scroll_var.get())
+        enabled = self._auto_scroll_var.get()
+        self._auto_scroll_btn.configure(text=("✓  " if enabled else "□  ") + t("auto_scroll"),
+                                        fg=C["text_primary"] if enabled else C["text_secondary"])
+        self._toggle_auto_scroll()
+
+    def _sort_caption(self):
+        labels = {"newest": "Newest", "oldest": "Oldest", "popularity": "Popular"}
+        return labels.get(self._sort_var.get(), "Newest") + "  ▾"
+
+    def _show_sort_menu(self):
+        menu = tk.Menu(self.root, tearoff=0, bg=C["card"], fg=C["text_primary"],
+                       activebackground=C["accent"], activeforeground=C["sidebar"])
+        for label, value in [("Newest", "newest"), ("Oldest", "oldest"), ("Most popular", "popularity")]:
+            menu.add_command(label=label, command=lambda val=value: self._set_sort(val))
+        try:
+            menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
+        finally:
+            menu.grab_release()
+
+    def _set_sort(self, value):
+        self._sort_var.set(value)
+        self._sort_btn.configure(text=self._sort_caption())
+        self._reload()
 
     def _toggle_filter_panel(self):
         if self._filters_wrap.winfo_ismapped():
@@ -1716,11 +1762,12 @@ class RSSApp:
             grid.pack(fill="both", expand=True)
             grid.grid_columnconfigure(0, weight=1, uniform="signal")
             grid.grid_columnconfigure(1, weight=1, uniform="signal")
+            grid.grid_columnconfigure(2, weight=1, uniform="signal")
             for index, item in enumerate(remaining):
                 card = NewsCard(grid, item, on_click=self._open_item,
                                  on_context=self._show_card_menu, load_images=load_img)
                 card.set_store(self.store)
-                row, col = divmod(index, 2)
+                row, col = divmod(index, 3)
                 card.grid(row=row, column=col, sticky="nsew", padx=5, pady=5)
                 self._cards.append(card)
 
