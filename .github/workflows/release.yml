@@ -1,4 +1,4 @@
-name: Build and Release EXE
+name: Build and Release Windows EXE
 
 on:
   push:
@@ -6,33 +6,79 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        pip install pyinstaller
-        pip install -r requirements.txt
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          python -m pip install -r requirements.txt
 
-    - name: Build with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed --name "RSS-Reader-Pro" qt_gui.py
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed `
+            --name "RSS-Reader-Pro" `
+            --icon "assets/rss-reader-pro.ico" `
+            --add-data "assets;assets" `
+            qt_gui.py
 
-    - name: Upload EXE to Release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./dist/RSS-Reader-Pro.exe
-        asset_name: RSS-Reader-Pro-${{ github.ref_name }}.exe
-        tag: ${{ github.ref_name }}
-        overwrite: true
+      # Enable this protected path only after configuring Microsoft Artifact Signing.
+      # Repository variables: ARTIFACT_SIGNING_ENABLED=true, ARTIFACT_SIGNING_ENDPOINT,
+      # ARTIFACT_SIGNING_ACCOUNT, ARTIFACT_SIGNING_PROFILE.
+      # Repository secrets: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.
+      - name: Azure login for Artifact Signing
+        if: ${{ vars.ARTIFACT_SIGNING_ENABLED == 'true' }}
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign EXE with Microsoft Artifact Signing
+        if: ${{ vars.ARTIFACT_SIGNING_ENABLED == 'true' }}
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\dist\RSS-Reader-Pro.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: RSS Reader Pro
+          description-url: https://github.com/erfan138057/rss-reader-app
+
+      - name: Verify Authenticode signature
+        if: ${{ vars.ARTIFACT_SIGNING_ENABLED == 'true' }}
+        shell: pwsh
+        run: |
+          $signature = Get-AuthenticodeSignature "${{ github.workspace }}\dist\RSS-Reader-Pro.exe"
+          $signature | Format-List Status, StatusMessage, SignerCertificate, TimeStamperCertificate
+          if ($signature.Status -ne 'Valid') {
+            throw "Authenticode signature verification failed: $($signature.Status)"
+          }
+
+      - name: Upload EXE to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./dist/RSS-Reader-Pro.exe
+          asset_name: RSS-Reader-Pro-${{ github.ref_name }}.exe
+          tag: ${{ github.ref_name }}
+          overwrite: true

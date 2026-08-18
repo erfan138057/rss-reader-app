@@ -64,7 +64,17 @@
 
 [![Download EXE](https://img.shields.io/badge/📥_Download_Windows_EXE-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest)
 
-> **Note:** On first run, Windows SmartScreen may appear. Click **More info** → **Run anyway**
+The Windows executable is built with the official RSS Reader Pro icon. The release workflow can additionally apply Microsoft Artifact Signing after the project owner configures its Azure identity. See [the SmartScreen signing guide](docs/SMARTSCREEN.md) for the required one-time setup and the limits of reputation-based warnings.
+
+### Download (Linux x86_64 — Portable)
+
+Download `RSS-Reader-Pro-v*-linux-x86_64.tar.gz` from [Releases](https://github.com/erfan138057/rss-reader-app/releases/latest), then extract and launch it:
+
+```bash
+tar -xzf RSS-Reader-Pro-v*-linux-x86_64.tar.gz
+cd RSS-Reader-Pro-v*-linux-x86_64
+./RSS-Reader-Pro
+```
 
 ### Run from Source
 
@@ -194,7 +204,17 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 [![دانلود EXE](https://img.shields.io/badge/📥_دانلود_ویندوز-0078D4?style=for-the-badge&logo=windows)](https://github.com/erfan138057/rss-reader-app/releases/latest)
 
-> **نکته:** در اولین اجرا ممکنه Windows SmartScreen نشون بده. روی **More info** → **Run anyway** کلیک کنید.
+فایل ویندوزی با آیکون رسمی RSS Reader Pro ساخته می‌شود. workflow انتشار برای امضای رسمی **Microsoft Artifact Signing** نیز آماده است؛ فعال‌سازی آن به تکمیل هویت Azure مالک پروژه نیاز دارد. راهنمای کامل و محدودیت‌های هشدار مبتنی بر شهرت در [راهنمای SmartScreen](docs/SMARTSCREEN.md) آمده است.
+
+### دانلود (لینوکس x86_64 — قابل‌حمل)
+
+فایل `RSS-Reader-Pro-v*-linux-x86_64.tar.gz` را از [Releases](https://github.com/erfan138057/rss-reader-app/releases/latest) دریافت کنید، سپس آن را استخراج و اجرا کنید:
+
+```bash
+tar -xzf RSS-Reader-Pro-v*-linux-x86_64.tar.gz
+cd RSS-Reader-Pro-v*-linux-x86_64
+./RSS-Reader-Pro
+```
 
 ### اجرا از سورس
 

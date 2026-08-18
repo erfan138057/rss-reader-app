@@ -25,9 +25,15 @@ New installations include improved Persian defaults from **BBC Persian**, **IRNA
 
 The feed database migration adds a category column automatically and preserves prior feeds, bookmarks and reading state. Reader Mode, desktop notifications and PDF export add `beautifulsoup4`, `plyer` and `reportlab` to the runtime dependencies.
 
+## Packaging and platform support
+
+The packaged Qt application now uses the official Signal Midnight icon on its application window, taskbar and Windows executable. The release includes a portable `x86_64` Linux archive in addition to the Windows EXE. Linux users extract the archive and run `RSS-Reader-Pro` directly; no VLC installation is required.
+
+The Windows workflow is prepared for Microsoft Artifact Signing with SHA-256 and RFC 3161 timestamping. The protected signing step activates after the owner configures the required Azure identity, account and certificate-profile settings. See `docs/SMARTSCREEN.md` for the configuration and the reputation-based behavior of SmartScreen.
+
 ## Quality checks
 
-The release passed Python compilation checks and six automated tests covering video detection, image/cache helpers, feed categories, unread state, advanced filters, popularity sorting, OPML transfer and bookmark HTML export.
+The release passed Python compilation checks and nine automated tests covering video detection, image/cache helpers, feed isolation, categories, unread state, advanced filters, popularity sorting, OPML transfer and bookmark export. The portable Linux archive was built with PyInstaller, checked for the required bundled XCB dependencies, smoke-tested with Qt's offscreen platform and inspected after packaging.
 
 ## Upgrade
 
@@ -37,4 +43,4 @@ pip install -r requirements.txt
 python gui.py
 ```
 
-Windows executable users can download a packaged build when it is attached to the release.
+Windows executable users can download the EXE from the release. Linux users can download `RSS-Reader-Pro-v1.0.3-linux-x86_64.tar.gz`, extract it and execute `RSS-Reader-Pro`.

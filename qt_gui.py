@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 
 import httpx
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject, QRunnable, QThreadPool, QDate
-from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QPen, QPixmap, QAction, QShortcut
+from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap, QAction, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QFrame, QLabel, QPushButton, QToolButton,
     QLineEdit, QScrollArea, QVBoxLayout, QHBoxLayout, QGridLayout, QDialog,
@@ -47,6 +47,17 @@ UI_FONT_DELTA = 0
 def set_ui_font_size(size: int):
     global UI_FONT_DELTA
     UI_FONT_DELTA = max(-1, min(5, int(size) - 9))
+
+
+def app_asset_path(relative_path: str) -> str:
+    """Resolve bundled assets for both source and PyInstaller builds."""
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
+def app_icon() -> QIcon:
+    return QIcon(app_asset_path(os.path.join("assets", "rss-reader-pro.png")))
+
 
 APP_QSS = f"""
 QMainWindow, QDialog {{ background: {C['canvas']}; color: {C['text']}; font-family: 'Segoe UI', Arial; }}
@@ -451,6 +462,7 @@ class SettingsDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(app_icon())
         self.settings = config.load_settings()
         set_lang(self.settings.get("language", "en"))
         set_ui_font_size(self.settings.get("font_size", 9))
@@ -858,6 +870,7 @@ class MainWindow(QMainWindow):
 
 def run():
     app = QApplication.instance() or QApplication(sys.argv)
+    app.setWindowIcon(app_icon())
     app.setStyleSheet(APP_QSS)
     window = MainWindow()
     window.show()
