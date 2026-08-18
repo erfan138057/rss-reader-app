@@ -2,6 +2,8 @@
 import os
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -93,6 +95,33 @@ class QtInteractionTests(unittest.TestCase):
         self.assertEqual(self.window.active_feed, "https://news.example/rss")
         self.assertFalse(extra)
         self.assertFalse(self.browser_calls)
+
+    def test_close_suppresses_late_background_fetch_callback(self):
+        started = threading.Event()
+        release = threading.Event()
+        failures = []
+        original_hook = threading.excepthook
+
+        def record_failure(args):
+            failures.append(f"{args.exc_type.__name__}: {args.exc_value}")
+
+        def slow_fetch(_url, _title, _notify):
+            started.set()
+            release.wait(timeout=3)
+            return []
+
+        threading.excepthook = record_failure
+        self.window.fetch_feed_data = slow_fetch
+        self.window.fetch_feed_async("https://news.example/rss")
+        self.assertTrue(started.wait(timeout=2))
+        self.window.close()
+        self.window.deleteLater()
+        self.process_events()
+        release.set()
+        time.sleep(0.2)
+        self.process_events()
+        threading.excepthook = original_hook
+        self.assertFalse(failures, "A late worker callback must not access a deleted Qt signal source.")
 
     def test_direct_video_opens_native_in_app_player(self):
         item = {

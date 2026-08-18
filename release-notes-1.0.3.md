@@ -37,9 +37,11 @@ Selecting a feed no longer detaches cards into temporary top-level widgets durin
 
 Direct MP4 and other compatible direct media now open in the native Qt player inside the application. The player includes play/pause, native audio/video output, an explanatory in-app error state and a deliberate fallback button for the user’s system player. Provider pages such as YouTube, Vimeo and Redgifs remain delegated to the system handler because they are not direct media streams.
 
+Background feed workers now receive an explicit shutdown signal before the window is destroyed. Late fetch and network callbacks safely become no-ops, preventing access to deleted Qt signal sources when a user closes the app during a refresh.
+
 ## Quality checks
 
-The release passed Python compilation checks, nine core automated tests and two Qt regression tests covering feed selection, browser/tab suppression and in-app video player routing. A separate headless behavioral check starts playback of a real public direct MP4 in the native Qt player. The portable Linux archive was built with PyInstaller, checked for the required bundled XCB dependencies, smoke-tested with Qt's offscreen platform and inspected after packaging.
+The release passed Python compilation checks, nine core automated tests and three Qt regression tests covering feed selection, browser/tab suppression, in-app video player routing and shutdown while a background fetch is still running. A separate headless behavioral check starts playback of a real public direct MP4 in the native Qt player. The portable Linux archive was built with PyInstaller, checked for the required bundled XCB dependencies, smoke-tested with Qt's offscreen platform and inspected after packaging.
 
 ## Upgrade
 
