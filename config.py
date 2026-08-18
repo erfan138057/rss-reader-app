@@ -52,7 +52,9 @@ DEFAULTS = {
     "load_images":    True,
     "font_size":      9,
     "card_style":     "telegram",
-    "video_internal": True,
+    # VLC تنها برای پخش داخلی اختیاری است؛ پخش پیش‌فرض با پلیر پیش‌فرض سیستم انجام می‌شود.
+    "video_internal": False,
+    "external_player_path": "",  # مسیر اختیاری پلیر دلخواه کاربر؛ در حالت خالی از پلیر پیش‌فرض سیستم استفاده می‌شود.
     "dns_auto":       False,
     "notifications":  True,
     "auto_scroll":    False,

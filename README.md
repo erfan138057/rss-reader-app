@@ -41,7 +41,7 @@
 |---------|-------------|
 | 🔐 DNS-over-HTTPS | Bypass internet filters with DoH |
 | 🔖 Bookmarks | Save articles with one click |
-| 🎬 Video Playback | YouTube, Vimeo, direct MP4 support |
+| 🎬 Video Playback | Opens with each user's system-default player; optional internal VLC mode for compatible direct videos |
 | 🎨 Dual UI | Reddit-style & Telegram-style views |
 | 🌙 Dark / Light | Switchable themes |
 | ⚡ Smart Cache | Fast performance with local caching |
@@ -97,7 +97,7 @@ python gui.py
 - **httpx** — HTTP client with DoH support
 - **feedparser** — RSS/Atom parsing
 - **Pillow** — image processing
-- **python-vlc** — video playback
+- **System default media handler** — opens videos with the player chosen by each user; VLC is optional for internal playback only
 
 ---
 
@@ -171,7 +171,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 |-------|-------|
 | 🔐 DNS-over-HTTPS | دور زدن فیلترینگ اینترنت |
 | 🔖 نشان‌گذاری | ذخیره مقالات با یک کلیک |
-| 🎬 پخش ویدیو | یوتیوب، ویمئو و MP4 مستقیم |
+| 🎬 پخش ویدیو | بازشدن با پلیر پیش‌فرض هر کاربر؛ VLC فقط برای پخش داخلی اختیاری است |
 | 🎨 دو رابط | نمای ردیت و تلگرام |
 | 🌙 دارک/لایت | تم تیره و روشن |
 | ⚡ کش هوشمند | سرعت بالا با ذخیره محلی |

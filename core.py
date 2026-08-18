@@ -758,12 +758,8 @@ def check_dependencies():
     """Check if required dependencies are available."""
     missing = []
     
-    # Check VLC
-    try:
-        import vlc
-    except ImportError:
-        missing.append("python-vlc (for video playback)")
-    
+    # VLC intentionally remains optional. Videos normally open through the system default handler.
+
     # Check PIL/Pillow
     try:
         from PIL import Image

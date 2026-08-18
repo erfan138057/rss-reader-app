@@ -156,13 +156,16 @@ class VideoWindow(tk.Toplevel):
     2. System default player (os.startfile / xdg-open)
     3. Browser fallback (always works)
     """
-    def __init__(self, parent, video_url: str, video_type: str, title: str):
+    def __init__(self, parent, video_url: str, video_type: str, title: str,
+                 prefer_internal: bool = False, external_player_path: str = ""):
         super().__init__(parent)
         self.title(t("video_title"))
         self.geometry("820x540")
         self.configure(bg=C["bg"])
         self._url  = video_url
         self._type = video_type
+        self._prefer_internal = prefer_internal
+        self._external_player_path = external_player_path.strip()
         self._player = None
         self._vol  = 100
         self._build(title)
@@ -180,15 +183,15 @@ class VideoWindow(tk.Toplevel):
         hdr.pack(fill="x")
         tk.Label(hdr, text=title[:80], font=F["btn"],
                   fg=C["text_primary"], bg=C["sidebar"]).pack(side="left", padx=14)
-        use_vlc = VLC_OK and self._vlc_lib_ok() and self._type in ("direct","redgifs")
+        use_vlc = (self._prefer_internal and VLC_OK and self._vlc_lib_ok()
+                   and self._type in ("direct", "redgifs"))
         if use_vlc:
-            core.LOG.info("Video: VLC embedded")
+            core.LOG.info("Video: optional embedded VLC player")
             self._build_vlc()
-        elif self._type in ("youtube","vimeo","redgifs"):
-            core.LOG.info(f"Video: online ({self._type}) → browser+system")
-            self._build_online()
         else:
-            core.LOG.info("Video: system player")
+            # The default path deliberately delegates to the user's own system handler.
+            # No bundled or pre-installed player is required.
+            core.LOG.info(f"Video: system default handler ({self._type})")
             self._build_system_ui()
             self.after(200, self._open_system)
 
@@ -255,23 +258,33 @@ class VideoWindow(tk.Toplevel):
         inner = tk.Frame(self, bg=C["bg"])
         inner.pack(fill="both", expand=True)
         tk.Label(inner, text="📽️", font=("Segoe UI", 48), bg=C["bg"]).pack(pady=24)
-        tk.Label(inner, text="Opening with system player…", font=F["large"],
+        tk.Label(inner, text="Opening with your system default player…", font=F["large"],
                   fg=C["text_primary"], bg=C["bg"]).pack()
         short = self._url[:72]+"…" if len(self._url)>72 else self._url
         tk.Label(inner, text=short, font=F["meta"], fg=C["text_secondary"], bg=C["bg"]).pack(pady=6)
         row = tk.Frame(inner, bg=C["bg"]); row.pack(pady=14)
-        _btn(row, "📂 Open Again", self._open_system,             bg=C["btn"]).pack(side="left", padx=8)
-        _btn(row, "🌐 Browser",    lambda: webbrowser.open(self._url), bg=C["input_bg"], fg=C["text_primary"]).pack(side="left", padx=4)
+        _btn(row, "📂 Open with System Default", self._open_system, bg=C["btn"]).pack(side="left", padx=8)
+        _btn(row, "🌐 Browser", lambda: webbrowser.open(self._url),
+             bg=C["input_bg"], fg=C["text_primary"]).pack(side="left", padx=4)
 
     def _open_system(self):
         import sys, subprocess
         try:
-            if sys.platform.startswith("win"):      os.startfile(self._url)
-            elif sys.platform.startswith("darwin"): subprocess.Popen(["open", self._url])
-            else:                                    subprocess.Popen(["xdg-open", self._url])
-            core.LOG.info(f"System player: {self._url}")
+            if self._external_player_path and os.path.isfile(self._external_player_path):
+                subprocess.Popen([self._external_player_path, self._url])
+                core.LOG.info(f"Custom video player: {self._external_player_path}")
+            elif sys.platform.startswith("win"):
+                # Windows opens the URL through the user's registered default application.
+                os.startfile(self._url)
+                core.LOG.info(f"Windows default video handler: {self._url}")
+            elif sys.platform.startswith("darwin"):
+                subprocess.Popen(["open", self._url])
+                core.LOG.info(f"macOS default video handler: {self._url}")
+            else:
+                subprocess.Popen(["xdg-open", self._url])
+                core.LOG.info(f"Linux default video handler: {self._url}")
         except Exception as e:
-            core.LOG.error(f"System player failed: {e}")
+            core.LOG.error(f"System video handler failed: {e}")
             webbrowser.open(self._url)
 
     # ── Controls ──
@@ -305,13 +318,16 @@ class VideoWindow(tk.Toplevel):
 class DetailWindow(tk.Toplevel):
     LONG_THRESHOLD = 300
 
-    def __init__(self, parent, item: dict, store=None):
+    def __init__(self, parent, item: dict, store=None, prefer_internal_video: bool = False,
+                 external_player_path: str = ""):
         super().__init__(parent)
         self.title(item.get("title","Article")[:60])
         self.geometry("740x580")
         self.configure(bg=C["bg"])
         self._item = item
         self._store = store
+        self._prefer_internal_video = prefer_internal_video
+        self._external_player_path = external_player_path
         self._build()
 
     def _build(self):
@@ -342,7 +358,9 @@ class DetailWindow(tk.Toplevel):
         if item.get("video_url"):
             _btn(meta_row, t("play_video"),
                   lambda: VideoWindow(self, item["video_url"], item["video_type"],
-                                       item.get("title","")),
+                                       item.get("title", ""),
+                                       prefer_internal=self._prefer_internal_video,
+                                       external_player_path=self._external_player_path),
                   bg=C["accent2"], fg=C["bg"]).pack(side="left", padx=10)
 
         tk.Frame(content, height=1, bg=C["separator"]).pack(fill="x", pady=(0,10))
@@ -586,11 +604,19 @@ class SettingsWindow(tk.Toplevel):
         # ── Video ──
         vd = self._section(inner, t("section_video"))
 
-        self._vid_int_var = tk.BooleanVar(value=self._s.get("video_internal", True))
+        self._vid_int_var = tk.BooleanVar(value=self._s.get("video_internal", False))
         self._row(vd, t("video_internal"), lambda p: tk.Checkbutton(
             p, variable=self._vid_int_var,
             bg=C["bg"], selectcolor=C["input_bg"],
             activebackground=C["bg"]).pack(side="left"))
+        self._player_path_var = tk.StringVar(value=self._s.get("external_player_path", ""))
+        def make_player_picker(parent):
+            tk.Entry(parent, textvariable=self._player_path_var, width=22,
+                     bg=C["input_bg"], fg=C["text_primary"], relief="flat",
+                     font=F["meta"], insertbackground=C["text_primary"]).pack(side="left", ipady=3)
+            _btn(parent, t("browse"), lambda: self._choose_player_path(),
+                 bg=C["input_bg"], fg=C["text_primary"], padx=7, pady=3).pack(side="left", padx=5)
+        self._row(vd, t("video_player_path"), make_player_picker)
 
         # ── DNS ──
         dn = self._section(inner, t("section_dns"))
@@ -606,6 +632,13 @@ class SettingsWindow(tk.Toplevel):
         _btn(btn_row, t("save"), self._save).pack(side="left")
         _btn(btn_row, t("cancel"), self.destroy,
               bg=C["input_bg"], fg=C["text_primary"]).pack(side="right")
+
+    def _choose_player_path(self):
+        path = filedialog.askopenfilename(
+            parent=self, title=t("video_player_path"),
+            filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])
+        if path:
+            self._player_path_var.set(path)
 
     def _save(self):
         theme_map = {t("theme_dark"): "dark", t("theme_light"): "light",
@@ -626,6 +659,7 @@ class SettingsWindow(tk.Toplevel):
             "auto_scroll":    self._auto_scroll_var.get(),
             "auto_scroll_speed": int(self._auto_scroll_speed_var.get() or 2),
             "video_internal": self._vid_int_var.get(),
+            "external_player_path": self._player_path_var.get().strip(),
             "dns_auto":       self._dns_auto_var.get(),
         })
         self._on_save(self._s)
@@ -1534,7 +1568,9 @@ class RSSApp:
             if hasattr(c,"item") and c.item.get("id")==item["id"]:
                 if hasattr(c,"mark_seen"): c.mark_seen()
                 break
-        DetailWindow(self.root, item, store=self.store)
+        DetailWindow(self.root, item, store=self.store,
+                     prefer_internal_video=self._settings.get("video_internal", False),
+                     external_player_path=self._settings.get("external_player_path", ""))
         unseen = sum(1 for c in self._cards
                      if hasattr(c,"item") and not c.item.get("seen"))
         self._hdr_count.configure(

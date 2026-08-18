@@ -4,11 +4,14 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import core
+import config
+import gui
 
 
 class MockEntry:
@@ -57,6 +60,20 @@ class CoreHelpersTests(unittest.TestCase):
     def test_ip_detection(self):
         self.assertTrue(core._is_ip("192.168.1.1"))
         self.assertFalse(core._is_ip("example.com"))
+
+
+class VideoPlayerRoutingTests(unittest.TestCase):
+    def test_system_player_is_default(self):
+        self.assertFalse(config.DEFAULTS["video_internal"])
+
+    def test_custom_player_path_is_used_when_configured(self):
+        window = gui.VideoWindow.__new__(gui.VideoWindow)
+        window._external_player_path = "/opt/player/custom-player"
+        window._url = "https://example.test/video.mp4"
+        with mock.patch("gui.os.path.isfile", return_value=True), \
+             mock.patch("subprocess.Popen") as popen:
+            gui.VideoWindow._open_system(window)
+        popen.assert_called_once_with(["/opt/player/custom-player", "https://example.test/video.mp4"])
 
 
 class StoreTests(unittest.TestCase):
