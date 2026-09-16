@@ -22,10 +22,7 @@
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
     <img src="https://img.shields.io/badge/📥_Download_Latest-0078D4?style=for-the-badge&logo=windows" alt="Download">
   </a>
-  <a href="https://daramet.com/erfan138057">
-    <img src="https://img.shields.io/badge/💛_Support_Project-F5A623?style=for-the-badge" alt="Donate">
-  </a>
-  <a href="https://github.com/erfan138057/rss-reader-app/discussions">
+<a href="https://github.com/erfan138057/rss-reader-app/discussions">
     <img src="https://img.shields.io/badge/💬_Discussions-2CA5E0?style=for-the-badge&logo=github" alt="Discussions">
   </a>
   <a href="https://github.com/erfan138057/rss-reader-app/issues">
@@ -111,16 +108,6 @@ python gui.py
 
 ---
 
-## 💛 Support
-
-If RSS Reader Pro saved you time or helped you access free information, consider supporting the project:
-
-[![Support on Daramet](https://img.shields.io/badge/💛_Support_on_Daramet-F5A623?style=for-the-badge)](https://daramet.com/erfan138057)
-
-**USDT (BEP20):** `0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
-
----
-
 ## 🤝 Contributing
 
 - 🐛 **Report bugs** — open an Issue
@@ -162,10 +149,7 @@ MIT License — see [LICENSE](LICENSE) for details.
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
     <img src="https://img.shields.io/badge/📥_دانلود_آخرین_نسخه-0078D4?style=for-the-badge&logo=windows" alt="دانلود">
   </a>
-  <a href="https://daramet.com/erfan138057">
-    <img src="https://img.shields.io/badge/💛_حمایت_از_پروژه-F5A623?style=for-the-badge" alt="دونیت">
-  </a>
-  <a href="https://github.com/erfan138057/rss-reader-app/discussions">
+<a href="https://github.com/erfan138057/rss-reader-app/discussions">
     <img src="https://img.shields.io/badge/💬_گفتگو-2CA5E0?style=for-the-badge&logo=github" alt="گفتگو">
   </a>
   <a href="https://github.com/erfan138057/rss-reader-app/issues">
