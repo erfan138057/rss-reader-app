@@ -213,16 +213,6 @@ python gui.py
 
 ---
 
-## 💛 حمایت از پروژه
-
-اگه این برنامه برات مفید بوده، میتونی از توسعه‌اش حمایت کنی:
-
-[![حمایت در دارامت](https://img.shields.io/badge/💛_حمایت_در_دارامت-F5A623?style=for-the-badge)](https://daramet.com/erfan138057)
-
-**USDT (BEP20):** `0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
-
----
-
 ## 🤝 مشارکت
 
 - 🐛 **گزارش باگ** — یک Issue باز کنید
