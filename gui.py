@@ -1293,8 +1293,12 @@ class RSSApp:
         self.root.bind_all("<Key-b>", self._keyboard_shortcut)
         self.root.bind_all("<Key-o>", self._keyboard_shortcut)
 
+        # Compatible IP: only install a DoH resolver when one is explicitly
+        # selected; otherwise the app uses the system resolver so it works
+        # from any country without VPN.
         doh = config.ACTIVE_DOH
-        core.install_doh_resolver(doh["ip"], doh["host"])
+        if doh:
+            core.install_doh_resolver(doh["ip"], doh["host"])
 
         self._monitor = core.InternetMonitor(interval=60,
                                                on_update=self._on_net_update)
@@ -1406,7 +1410,7 @@ class RSSApp:
         bot = tk.Frame(self.sidebar, bg=C["sidebar"], highlightthickness=1,
                        highlightbackground=C["separator"])
         bot.pack(side="bottom", fill="x", padx=12, pady=12)
-        self._dns_lbl = tk.Label(bot, text=f"DNS · {config.ACTIVE_DOH['name']}",
+        self._dns_lbl = tk.Label(bot, text=f"DNS · " + ((config.ACTIVE_DOH["name"] if config.ACTIVE_DOH else "System DNS")),
                                   font=F["meta"], fg=C["text_secondary"], bg=C["sidebar"])
         self._dns_lbl.pack(anchor="w", padx=10, pady=(7, 1))
         self._net_side_lbl = tk.Label(bot, text="● " + t("net_checking"), font=F["meta"],

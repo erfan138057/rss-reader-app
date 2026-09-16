@@ -668,7 +668,7 @@ class MainWindow(QMainWindow):
         self.feed_scroll.setWidget(self.feed_host); layout.addWidget(self.feed_scroll, 1)
         more = button("⋯  More tools", "moreTool"); more.clicked.connect(self.more_tools); layout.addWidget(more)
         net = QFrame(); net.setStyleSheet(f"background:{C['surface']}; border:1px solid {C['line']}; border-radius:8px;")
-        nl = QVBoxLayout(net); nl.setContentsMargins(10, 8, 10, 8); nl.addWidget(label(f"DNS · {config.ACTIVE_DOH['name']}", 8, C["muted"])); self.side_network = label("● Checking…", 8, C["success"]); nl.addWidget(self.side_network)
+        nl = QVBoxLayout(net); nl.setContentsMargins(10, 8, 10, 8); nl.addWidget(label(f"DNS · " + (config.ACTIVE_DOH["name"] if config.ACTIVE_DOH else "System DNS"), 8, C["muted"])); self.side_network = label("● Checking…", 8, C["success"]); nl.addWidget(self.side_network)
         layout.addWidget(net)
         return panel
 
