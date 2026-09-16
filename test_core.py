@@ -136,11 +136,16 @@ class StoreTests(unittest.TestCase):
         pdf_path = os.path.join(self.temp_dir.name, "bookmarks.pdf")
         self.store.export_opml(opml_path)
         self.store.export_bookmarks_html(html_path)
-        self.store.export_bookmarks_pdf(pdf_path)
+        try:
+            self.store.export_bookmarks_pdf(pdf_path)
+            self.assertTrue(Path(pdf_path).read_bytes().startswith(b"%PDF"))
+        except RuntimeError as exc:
+            if "reportlab" in str(exc):
+                self.skipTest("reportlab not installed — PDF export skipped")
+            raise
         self.assertTrue(Path(opml_path).exists())
         self.assertIn("https://news.example/rss", Path(opml_path).read_text(encoding="utf-8"))
         self.assertIn("Saved news", Path(html_path).read_text(encoding="utf-8"))
-        self.assertTrue(Path(pdf_path).read_bytes().startswith(b"%PDF"))
 
         imported = core.Store(os.path.join(self.temp_dir.name, "imported.db"))
         try:

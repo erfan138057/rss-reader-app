@@ -1,6 +1,6 @@
 # Version Information
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 __release_date__ = "2026-08-18"
 __status__ = "Stable"
 __build__ = "20260818"

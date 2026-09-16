@@ -10,6 +10,7 @@ import sys
 import time
 import threading
 import webbrowser
+import urllib.parse, urllib.request as _urlreq
 import subprocess
 from functools import partial
 from urllib.parse import urlparse
@@ -118,13 +119,22 @@ def button(text: str, object_name: str = "", checkable: bool = False) -> QPushBu
 
 
 def open_system_video(url: str, external_player_path: str = ""):
-    """Open a video using the user's chosen player or registered system handler."""
+    """Open a video using the user's chosen player or registered system handler.
+    Compatible with KMPlayer/PotPlayer and non-ASCII URLs by passing URL as
+    a single quoted argument and falling back to webbrowser.
+    """
     try:
+        url = url.strip()
         if external_player_path and os.path.isfile(external_player_path):
+            # Pass URL as separate arg — list form handles spaces/unicode correctly
             subprocess.Popen([external_player_path, url])
-            core.LOG.info(f"Custom video player: {external_player_path}")
+            core.LOG.info(f"Custom video player: {external_player_path} -> {url}")
         elif sys.platform.startswith("win"):
-            os.startfile(url)
+            try:
+                os.startfile(url)
+            except Exception:
+                # Fallback for players that don't register startfile handler
+                webbrowser.open(url)
             core.LOG.info(f"Windows default video handler: {url}")
         elif sys.platform.startswith("darwin"):
             subprocess.Popen(["open", url])
@@ -448,10 +458,48 @@ class ReaderDialog(QDialog):
         self.reader_signals.done.connect(self.apply_reader)
         self.reader_signals.failed.connect(lambda message: self.body.setText(f"Reader Mode could not load this article.\n\n{message}"))
         layout.addWidget(self.body, 1)
+        # Pro AI section — shown only when a valid Pro license is active
+        try:
+            import license as _lic
+            _pro_on = _lic.pro_enabled(getattr(self.parent(), "settings", {}))
+        except Exception:
+            _pro_on = False
+        if _pro_on:
+            pro_bar = QHBoxLayout()
+            pro_bar.addWidget(label("✨ Pro AI", 9, C["teal"], True))
+            pro_bar.addStretch(1)
+            layout.addLayout(pro_bar)
+            ai_panel = QFrame()
+            ai_panel.setStyleSheet(
+                f"background:{C['surface']}; border:1px solid {C['line']}; border-radius:8px; padding:8px;"
+            )
+            prow = QHBoxLayout(ai_panel)
+            prow.setContentsMargins(4, 4, 4, 4)
+            self.btn_summary = button("✨ AI Summary", "darkButton")
+            self.btn_translate = button("🌐 Translate", "darkButton")
+            self.btn_categorize = button("🏷️ Categorize", "darkButton")
+            for b in (self.btn_summary, self.btn_translate, self.btn_categorize):
+                prow.addWidget(b)
+            prow.addStretch(1)
+            layout.addWidget(ai_panel)
+            self.btn_summary.clicked.connect(lambda: self._pro_ai("summary"))
+            self.btn_translate.clicked.connect(lambda: self._pro_ai("translate"))
+            self.btn_categorize.clicked.connect(lambda: self._pro_ai("categorize"))
         close = button("Close", "darkButton")
         close.clicked.connect(self.accept)
         layout.addWidget(close, alignment=Qt.AlignRight)
         threading.Thread(target=self.load_reader, daemon=True).start()
+
+    def _pro_ai(self, action: str):
+        try:
+            import ai_pro
+            text = self.body.toPlainText()
+            app_settings = getattr(self.parent(), "settings", {})
+            self.body.append("\n" + "⏳ " + action + "...")
+            result = ai_pro.ask(app_settings, action, text)
+            self.body.append("\n\n" + result)
+        except Exception as exc:
+            self.body.append("\n\n⚠ " + str(exc))
 
     def load_reader(self):
         try:
@@ -828,9 +876,52 @@ class MainWindow(QMainWindow):
 
     def more_tools(self):
         menu = QMenu(self)
-        actions = [("Import OPML", self.import_opml), ("Export OPML", self.export_opml), ("Export bookmarks", self.export_bookmarks), ("DNS Scanner", self.open_dns), ("App log", self.open_log)]
-        for name, fn in actions: menu.addAction(name, fn)
+        actions = [
+            ("Import OPML", self.import_opml),
+            ("Export OPML", self.export_opml),
+            ("Export bookmarks", self.export_bookmarks),
+            ("Generate RSS from site", self.generate_rss),
+            ("DNS Scanner", self.open_dns),
+            ("App log", self.open_log),
+        ]
+        for name, fn in actions:
+            menu.addAction(name, fn)
         menu.exec(self.cursor().pos())
+
+    def generate_rss(self):
+        """Free RSS Generator: point to a website, get an RSS feed XML file."""
+        site_url, ok = QInputDialog.getText(self, "Generate RSS", "Website URL (e.g. https://example.com/news):")
+        if not ok or not site_url.strip():
+            return
+        title, _ = QInputDialog.getText(self, "Generate RSS", "Feed title (optional):")
+        self.set_status("Generating RSS feed...")
+        signals = ResultSignals(self)
+        signals.done.connect(self._rss_generated)
+        signals.failed.connect(lambda m: (QMessageBox.warning(self, "Generate RSS", m), self.set_status("Ready")))
+        def worker():
+            try:
+                result = core.generate_rss_xml(site_url.strip(), title.strip())
+                signals.done.emit(result)
+            except Exception as exc:
+                signals.failed.emit(str(exc))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _rss_generated(self, result: dict):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save RSS feed", "feed.xml", "XML files (*.xml)")
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(result["xml"])
+            # Optionally register the feed in the app store immediately
+            import httpx as _h
+            # Write to a local temp file and expose it — we use file:// as feed URL
+            self.store.add_feed(f"file://{path}", result.get("title") or "Local feed", "Generated")
+            self.set_status(f"RSS generated: {result['count']} items → {path}")
+            self.refresh_all()
+        except Exception as exc:
+            QMessageBox.warning(self, "Generate RSS", str(exc))
 
     def import_opml(self):
         path, _ = QFileDialog.getOpenFileName(self, "Import OPML", "", "OPML files (*.opml *.xml)")

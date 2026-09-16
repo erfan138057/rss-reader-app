@@ -280,7 +280,7 @@ class VideoWindow(tk.Toplevel):
         import sys, subprocess
         try:
             if self._external_player_path and os.path.isfile(self._external_player_path):
-                subprocess.Popen([self._external_player_path, self._url])
+                subprocess.Popen([self._external_player_path, self._url.strip()])
                 core.LOG.info(f"Custom video player: {self._external_player_path}")
             elif sys.platform.startswith("win"):
                 # Windows opens the URL through the user's registered default application.

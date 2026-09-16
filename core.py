@@ -495,13 +495,15 @@ class Store:
     def import_opml(self, path: str) -> int:
         tree = ET.parse(path)
         root = tree.getroot()
+        # Build parent map for correct category inheritance
+        parent_map = {child: parent for parent in root.iter() for child in parent}
         imported = 0
         for outline in root.findall(".//outline[@xmlUrl]"):
             url = outline.get("xmlUrl", "").strip()
             if not url:
                 continue
-            category = outline.get("category", "")
-            parent = next((p for p in root.findall(".//outline") if outline in list(p)), None)
+            category = outline.get("category", "") or outline.get("category", "")
+            parent = parent_map.get(outline)
             if not category and parent is not None:
                 category = parent.get("title") or parent.get("text") or "عمومی"
             self.add_feed(url, outline.get("title") or outline.get("text") or "", category or "عمومی")
@@ -802,3 +804,74 @@ def check_dependencies():
     
     LOG.info("All dependencies available")
     return True
+
+# ---------------------------------------------------------------------------
+# RSS Generator (Free) — build an RSS feed from any website that has none
+# ---------------------------------------------------------------------------
+def generate_rss_xml(site_url: str, title: str = "", max_items: int = 20,
+                     author: str = "RSS Reader Pro") -> dict:
+    """Generate an RSS 2.0 feed from a regular web page.
+
+    Used by the free Generator feature: users without an RSS endpoint can
+    point the app at a site and get a usable feed file. No credentials,
+    no external services — only the target page itself.
+    """
+    if not BS4_OK:
+        raise RuntimeError("beautifulsoup4 is required for RSS Generator")
+    parsed = urlparse(site_url)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError("Enter a full site URL (e.g. https://example.com/news)")
+    r = httpx.get(site_url, timeout=20, follow_redirects=True,
+                  headers={"User-Agent": "Mozilla/5.0 (RSSReaderPro/1.1.0)"})
+    r.raise_for_status()
+    soup = BeautifulSoup(r.text, "html.parser")
+    base = f"{urlparse(r.url).scheme}://{urlparse(r.url).netloc}"
+    site_title = title.strip() or (soup.title.get_text(strip=True) if soup.title else "Generated feed")
+
+    # Collect article candidates: prefer real article markup, fall back to
+    # link headings with enough text to be an article.
+    seen, entries = set(), []
+    nodes = soup.select("article, .post, .article, [itemtype*='article']")
+    for node in nodes:
+        a = node.find("a")
+        text = node.get_text(" ", strip=True)
+        if a and a.get("href") and len(text) >= 30:
+            entries.append((a["href"], text[:200], text[:300]))
+    if len(entries) < 3:
+        for a in soup.find_all("a"):
+            href = a.get("href") or ""
+            text = a.get_text(" ", strip=True)
+            if not href.startswith("http") and not href.startswith("/"):
+                continue
+            if len(text) < 40:
+                continue
+            href = urljoin(base, href.split("#")[0])
+            if href in seen or not any(s in href.lower() for s in ("?p=", "/20", "/page", "post", "article", "story")) and href.count("/") > 3:
+                continue
+            if href in seen:
+                continue
+            seen.add(href)
+            entries.append((href, text[:150], ""))
+            if len(entries) >= max_items * 2:
+                break
+    entries = entries[:max_items]
+    if not entries:
+        raise ValueError(f"No article-like links found at {site_url} — the page may be heavily JavaScript-rendered.")
+
+    root = ET.Element("rss", version="2.0")
+    channel = ET.SubElement(root, "channel")
+    ET.SubElement(channel, "title").text = site_title
+    ET.SubElement(channel, "link").text = r.url
+    ET.SubElement(channel, "description").text = f"RSS feed generated from {r.url}"
+    ET.SubElement(channel, "lastBuildDate").text = datetime.now().isoformat()
+    for href, headline, snippet in entries:
+        href = urljoin(base, href.split("#")[0])
+        item = ET.SubElement(channel, "item")
+        ET.SubElement(item, "title").text = headline[:200]
+        ET.SubElement(item, "link").text = href
+        ET.SubElement(item, "guid").text = href
+        if snippet:
+            ET.SubElement(item, "description").text = html.escape(snippet)[:500]
+        ET.SubElement(item, "pubDate").text = datetime.now().isoformat()
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")
+    return {"url": r.url, "title": site_title, "xml": xml, "count": len(entries)}

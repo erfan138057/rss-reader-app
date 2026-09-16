@@ -54,7 +54,10 @@ DOH_SERVERS = [
     {"name": "OpenDNS",        "ip": "208.67.222.222",  "host": "doh.opendns.com"},
 ]
 
-ACTIVE_DOH     = DOH_SERVERS[0]
+# Compatible IP: no hard-coded override. System DNS is used by default;
+# DoH is only activated when user enables it (settings dns_auto or scanner).
+# This keeps the app working with the origin country's IP without VPN.
+ACTIVE_DOH     = None  # was DOH_SERVERS[0] — now opt-in
 CHECK_INTERVAL = 300
 
 DEFAULT_FEEDS = [
@@ -96,6 +99,9 @@ DEFAULTS = {
     "auto_scroll_speed": 2,
     "deleted_feeds":  [],   # feeds the user explicitly removed — never re-add
     "added_feeds":    [],   # feeds the user manually added — always re-add
+    # Pro licensing — key filled by buyer, secret read from env at runtime
+    "pro_key":        "",    # empty = Free edition
+    "pro_worker_url": "",    # Cloudflare Worker address, user-provided, never hardcoded
 }
 
 def load_settings() -> dict:
