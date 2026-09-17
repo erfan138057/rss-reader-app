@@ -546,7 +546,8 @@ class MainWindow(QMainWindow):
         set_ui_font_size(self.settings.get("font_size", 9))
         QApplication.instance().setLayoutDirection(Qt.RightToLeft if self.settings.get("language") == "fa" else Qt.LeftToRight)
         self.store = core.Store(config.DB_FILE)
-        self.bridge = Bridge()
+        self._closing = threading.Event()
+        self.bridge = Bridge(self)
         self.bridge.refreshed.connect(self.on_refreshed)
         self.bridge.loaded.connect(self.on_loaded)
         self.bridge.network.connect(self.on_network)
@@ -562,7 +563,7 @@ class MainWindow(QMainWindow):
         self.resize(1520, 920)
         self.build_ui()
         self.install_shortcuts()
-        self.monitor = core.InternetMonitor(interval=45, on_update=lambda value: self.bridge.network.emit(value))
+        self.monitor = core.InternetMonitor(interval=45, on_update=self.emit_network_if_active)
         self.monitor.start()
         self.install_default_feeds()
         self.refresh_all()
@@ -904,34 +905,74 @@ class MainWindow(QMainWindow):
     def toggle_theme(self):
         QMessageBox.information(self, "Signal Midnight", "Signal Midnight is the curated visual tint for this release.")
 
+    def emit_loaded_if_active(self):
+        """Emit a UI signal only while the owning window is still valid."""
+        if self._closing.is_set():
+            return
+        try:
+            self.bridge.loaded.emit()
+        except RuntimeError as exc:
+            core.LOG.debug(f"Skipped late loaded signal during shutdown: {exc}")
+
+    def emit_network_if_active(self, value):
+        if self._closing.is_set():
+            return
+        try:
+            self.bridge.network.emit(value)
+        except RuntimeError as exc:
+            core.LOG.debug(f"Skipped late network signal during shutdown: {exc}")
+
     def fetch_initial_async(self):
         def worker():
-            for feed in self.store.get_feeds(): self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], False)
-            self.bridge.loaded.emit()
+            for feed in self.store.get_feeds():
+                if self._closing.is_set():
+                    return
+                self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], False)
+            self.emit_loaded_if_active()
         threading.Thread(target=worker, daemon=True).start()
 
     def fetch_all_async(self):
         def worker():
-            for feed in self.store.get_feeds(): self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], True)
-            self.bridge.loaded.emit()
+            for feed in self.store.get_feeds():
+                if self._closing.is_set():
+                    return
+                self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], True)
+            self.emit_loaded_if_active()
         threading.Thread(target=worker, daemon=True).start()
 
     def fetch_feed_async(self, url, notify: bool = False):
         feed = next((f for f in self.store.get_feeds() if f["url"] == url), {})
-        threading.Thread(target=lambda: (self.fetch_feed_data(url, feed.get("title") or url, notify), self.bridge.loaded.emit()), daemon=True).start()
+        def worker():
+            if self._closing.is_set():
+                return
+            self.fetch_feed_data(url, feed.get("title") or url, notify)
+            self.emit_loaded_if_active()
+        threading.Thread(target=worker, daemon=True).start()
 
     def fetch_feed_data(self, url, title, notify):
-        items = core.fetch_feed(url); fresh = [item for item in items if self.store.upsert(item, url)]
-        if notify and self.settings.get("notifications", True) and fresh: core.notify_new_items(title, fresh)
+        if self._closing.is_set():
+            return []
+        items = core.fetch_feed(url)
+        if self._closing.is_set():
+            return []
+        fresh = [item for item in items if self.store.upsert(item, url)]
+        if notify and not self._closing.is_set() and self.settings.get("notifications", True) and fresh:
+            core.notify_new_items(title, fresh)
         return fresh
 
     def on_loaded(self):
+        if self._closing.is_set():
+            return
         self.refresh_all(); self.set_status("● Ready")
 
     def on_refreshed(self, message):
+        if self._closing.is_set():
+            return
         self.refresh_all(); self.set_status(message)
 
     def on_network(self, result):
+        if self._closing.is_set():
+            return
         self.network.setText("● " + result.get("label", "Checking…")); self.network.setStyleSheet(f"color:{result.get('color', C['success'])};")
         self.side_network.setText("● " + result.get("label", "Checking…")); self.side_network.setStyleSheet(f"color:{result.get('color', C['success'])};")
 
@@ -948,7 +989,15 @@ class MainWindow(QMainWindow):
             self.store.toggle_bookmark(self.focused_item["id"]); self.refresh_view()
 
     def closeEvent(self, event):
-        self.monitor.stop(); event.accept()
+        # Workers are daemon threads, so they may finish after the Qt event loop.
+        # Mark shutdown first and make every bridge callback a safe no-op.
+        self._closing.set()
+        if hasattr(self, "scroll_timer"):
+            self.scroll_timer.stop()
+        if hasattr(self, "refresh_timer"):
+            self.refresh_timer.stop()
+        self.monitor.stop()
+        event.accept()
 
 
 def run():
