@@ -13,6 +13,7 @@ import hashlib
 import threading
 import logging
 import sys
+import shutil
 from urllib.parse import urlparse
 from datetime import datetime
 from email.utils import parsedate_to_datetime
@@ -259,7 +260,11 @@ class InternetMonitor:
 # Database
 # ---------------------------------------------------------------------------
 class Store:
+    SCHEMA_VERSION = 3
+
     def __init__(self, db_file="rss_reader.db"):
+        self.db_file = db_file
+        self._backup_database()
         self.conn = sqlite3.connect(db_file, check_same_thread=False)
         self._lock = threading.Lock()
         self.conn.executescript("""
@@ -283,7 +288,10 @@ class Store:
                 title    TEXT,
                 category TEXT DEFAULT 'عمومی',
                 pinned   INTEGER DEFAULT 0,
-                added_at TEXT
+                added_at TEXT,
+                last_status TEXT DEFAULT 'never',
+                last_error TEXT DEFAULT '',
+                last_fetched TEXT
             );
         """)
         # migrate existing DB — add columns if missing
@@ -296,12 +304,37 @@ class Store:
                 self.conn.commit()
             except sqlite3.OperationalError:
                 pass
-        try:
-            self.conn.execute("ALTER TABLE feeds ADD COLUMN category TEXT DEFAULT 'عمومی'")
-            self.conn.commit()
-        except sqlite3.OperationalError:
-            pass
+        migrations = [
+            ("category", "TEXT DEFAULT 'عمومی'"),
+            ("last_status", "TEXT DEFAULT 'never'"),
+            ("last_error", "TEXT DEFAULT ''"),
+            ("last_fetched", "TEXT"),
+        ]
+        for col, definition in migrations:
+            try:
+                self.conn.execute(f"ALTER TABLE feeds ADD COLUMN {col} {definition}")
+                self.conn.commit()
+            except sqlite3.OperationalError:
+                pass
+        self.conn.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
+        self.conn.commit()
         LOG.info(f"DB opened: {db_file}")
+
+    def _backup_database(self):
+        """Keep a small rolling backup before opening/migrating a database."""
+        source = Path(self.db_file)
+        if not source.exists() or source.stat().st_size == 0:
+            return
+        backup_dir = source.parent / "backups"
+        try:
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            shutil.copy2(source, backup_dir / f"rss_reader-{stamp}.db")
+            backups = sorted(backup_dir.glob("rss_reader-*.db"), key=lambda item: item.stat().st_mtime)
+            for old in backups[:-3]:
+                old.unlink(missing_ok=True)
+        except OSError as exc:
+            LOG.warning(f"Database backup skipped: {exc}")
 
     def close(self):
         """Close the SQLite connection safely and idempotently."""
@@ -445,7 +478,23 @@ class Store:
                 (image_url, item_id))
             self.conn.commit()
 
+    @staticmethod
+    def validate_feed_url(url: str) -> str:
+        value = (url or "").strip()
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("Feed URL must be a valid http:// or https:// address.")
+        return value
+
+    def update_feed_status(self, url: str, status: str, error: str = ""):
+        with self._lock:
+            self.conn.execute(
+                "UPDATE feeds SET last_status=?, last_error=?, last_fetched=? WHERE url=?",
+                (status, error[:500], datetime.now().isoformat(), url))
+            self.conn.commit()
+
     def add_feed(self, url, title="", category="عمومی"):
+        url = self.validate_feed_url(url)
         category = (category or "عمومی").strip()
         with self._lock:
             self.conn.execute("""
@@ -484,8 +533,9 @@ class Store:
     def get_feeds(self) -> list:
         with self._lock:
             cur = self.conn.execute(
-                "SELECT url,title,category,pinned FROM feeds ORDER BY category, pinned DESC, added_at ASC")
-            return [{"url": r[0], "title": r[1], "category": r[2] or "عمومی", "pinned": bool(r[3])}
+                "SELECT url,title,category,pinned,last_status,last_error,last_fetched FROM feeds ORDER BY category, pinned DESC, added_at ASC")
+            return [{"url": r[0], "title": r[1], "category": r[2] or "عمومی", "pinned": bool(r[3]),
+                     "last_status": r[4] or "never", "last_error": r[5] or "", "last_fetched": r[6] or ""}
                     for r in cur.fetchall()]
 
     def export_opml(self, path: str, app_title="RSS Reader Pro"):
@@ -517,7 +567,11 @@ class Store:
             parent = next((p for p in root.findall(".//outline") if outline in list(p)), None)
             if not category and parent is not None:
                 category = parent.get("title") or parent.get("text") or "عمومی"
-            self.add_feed(url, outline.get("title") or outline.get("text") or "", category or "عمومی")
+            try:
+                self.add_feed(url, outline.get("title") or outline.get("text") or "", category or "عمومی")
+            except ValueError:
+                LOG.warning(f"Skipped invalid OPML URL: {url}")
+                continue
             imported += 1
         LOG.info(f"OPML imported: {imported} feeds from {path}")
         return imported
@@ -715,11 +769,24 @@ def fetch_og_image(page_url, timeout=8) -> str:
     return ""
 
 def fetch_image_bytes(url, timeout=10) -> bytes:
+    """Fetch an image through a bounded on-disk cache."""
+    cache_key = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    cache_path = Path(config.IMAGE_CACHE_DIR) / f"{cache_key}.bin"
     try:
-        r = httpx.get(url, timeout=timeout,
-                       headers={"User-Agent":"Mozilla/5.0"}, follow_redirects=True)
-        if r.status_code == 200 and "image" in r.headers.get("content-type",""):
-            return r.content
+        if cache_path.exists():
+            cache_path.touch()
+            return cache_path.read_bytes()
+        r = httpx.get(url, timeout=timeout, headers={"User-Agent":"Mozilla/5.0"}, follow_redirects=True)
+        if r.status_code == 200 and "image" in r.headers.get("content-type", ""):
+            data = r.content
+            cache_path.write_bytes(data)
+            files = sorted(Path(config.IMAGE_CACHE_DIR).glob("*.bin"), key=lambda x: x.stat().st_atime)
+            total = sum(f.stat().st_size for f in files)
+            for old in files:
+                if total <= config.IMAGE_CACHE_MAX_BYTES: break
+                size = old.stat().st_size
+                old.unlink(missing_ok=True); total -= size
+            return data
     except Exception as e:
         LOG.debug(f"Image fetch failed {url}: {e}")
     return b""

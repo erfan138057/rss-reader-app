@@ -57,16 +57,16 @@
 
 #### From Source
 ```bash
-git clone https://github.com/yourusername/rss-reader.git
+git clone https://github.com/erfan138057/rss-reader-app.git
 cd rss-reader
 pip install -r requirements.txt
-python gui.py
+python qt_gui.py
 ```
 
 ### 👥 Community
 
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/rss-reader/discussions)
-- 📡 **Issues**: [Report Bugs](https://github.com/yourusername/rss-reader/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/erfan138057/rss-reader-app/discussions)
+- 📡 **Issues**: [Report Bugs](https://github.com/erfan138057/rss-reader-app/issues)
 - ❤️ **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ### 📊 Statistics
@@ -83,8 +83,8 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 ---
 
-**Download**: [rss-reader-v1.0.0.exe](https://github.com/yourusername/rss-reader/releases/download/v1.0.0/rss-reader-v1.0.0.exe)  
-**SHA256**: `a1b2c3d4e5f6...` (verify before running)  
-**Size**: ~15MB  
+**Download**: [rss-reader-v1.0.0.exe](https://github.com/erfan138057/rss-reader-app/releases/download/v1.0.0/rss-reader-v1.0.0.exe)
+**SHA256**: `a1b2c3d4e5f6...` (verify before running)
+**Size**: ~15MB
 
 *Happy reading! 📚✨*

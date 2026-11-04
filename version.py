@@ -6,7 +6,7 @@ __status__ = "Stable"
 __build__ = "20260818"
 
 # Supported Platforms
-SUPPORTED_PLATFORMS = ["Windows"]
+SUPPORTED_PLATFORMS = ["Windows", "Linux"]
 
 # Minimum Requirements
 MINIMUM_PYTHON = "3.8"

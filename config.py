@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import shutil
+import tempfile
 
 _APP_BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,6 +28,9 @@ def _data_dir() -> str:
 _DATA_DIR = _data_dir()
 DB_FILE       = os.path.join(_DATA_DIR, "rss_reader.db")
 SETTINGS_FILE = os.path.join(_DATA_DIR, "settings.json")
+IMAGE_CACHE_DIR = os.path.join(_DATA_DIR, "image-cache")
+IMAGE_CACHE_MAX_BYTES = 64 * 1024 * 1024
+os.makedirs(IMAGE_CACHE_DIR, exist_ok=True)
 
 # One-file builds extract into a temporary directory. Copy legacy side-by-side
 # data once when present, rather than creating an empty profile on upgrade.
@@ -94,6 +98,7 @@ DEFAULTS = {
     "notifications":  True,
     "auto_scroll":    False,
     "auto_scroll_speed": 2,
+    "diagnostics_enabled": True,
     "deleted_feeds":  [],   # feeds the user explicitly removed — never re-add
     "added_feeds":    [],   # feeds the user manually added — always re-add
 }
@@ -109,8 +114,18 @@ def load_settings() -> dict:
     return s
 
 def save_settings(data: dict):
+    """Write settings atomically so a power loss cannot leave invalid JSON."""
     try:
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception:
+        directory = os.path.dirname(SETTINGS_FILE) or "."
+        fd, temporary = tempfile.mkstemp(prefix=".settings-", suffix=".tmp", dir=directory)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary, SETTINGS_FILE)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+    except OSError:
         pass

@@ -151,6 +151,44 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(saved["video_url"], original["video_url"])
         self.assertEqual(saved["published"], original["published"])
 
+
+    def test_feed_url_validation_and_status(self):
+        with self.assertRaises(ValueError):
+            self.store.add_feed("not-a-url", "Bad", "Test")
+        feed = "https://news.example/rss"
+        self.store.add_feed(feed, "News", "Test")
+        self.store.update_feed_status(feed, "error", "timeout")
+        saved = self.store.get_feeds()[0]
+        self.assertEqual(saved["last_status"], "error")
+        self.assertEqual(saved["last_error"], "timeout")
+
+
+    def test_database_backup_is_created_on_reopen(self):
+        feed = "https://news.example/rss"
+        self.store.add_feed(feed, "News", "Test")
+        self.store.close()
+        reopened = core.Store(self.db_path)
+        try:
+            backups = list(Path(self.temp_dir.name, "backups").glob("rss_reader-*.db"))
+            self.assertTrue(backups)
+            self.assertEqual(reopened.get_feeds()[0]["url"], feed)
+        finally:
+            reopened.close()
+
+    def test_schema_version_and_image_cache(self):
+        version = self.store.conn.execute("PRAGMA user_version").fetchone()[0]
+        self.assertEqual(version, core.Store.SCHEMA_VERSION)
+        old_dir = config.IMAGE_CACHE_DIR
+        with tempfile.TemporaryDirectory() as cache_dir:
+            config.IMAGE_CACHE_DIR = cache_dir
+            response = mock.Mock(status_code=200, content=b"image-data")
+            response.headers = {"content-type": "image/png"}
+            with mock.patch("core.httpx.get", return_value=response) as request:
+                self.assertEqual(core.fetch_image_bytes("https://example.test/a.png"), b"image-data")
+                self.assertEqual(core.fetch_image_bytes("https://example.test/a.png"), b"image-data")
+                request.assert_called_once()
+        config.IMAGE_CACHE_DIR = old_dir
+
     def test_opml_and_bookmark_html_export(self):
         self.store.add_feed("https://news.example/rss", "News", "اخبار")
         self.store.add_feed("https://tech.example/rss", "Tech", "فناوری")

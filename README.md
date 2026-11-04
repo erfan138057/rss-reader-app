@@ -82,7 +82,7 @@ cd RSS-Reader-Pro-v*-linux-x86_64
 git clone https://github.com/erfan138057/rss-reader-app.git
 cd rss-reader-app
 pip install -r requirements.txt
-python gui.py
+python qt_gui.py
 ```
 
 **Requirements:** Python 3.8+ · VLC Media Player (optional, for video)
@@ -107,7 +107,7 @@ python gui.py
 - **httpx** — HTTP client with DoH support
 - **feedparser** — RSS/Atom parsing
 - **Pillow** — image processing
-- **System default media handler** — opens videos with the player chosen by each user; VLC is optional for internal playback only
+- **System default media handler** — opens videos with the player chosen by each user; VLC is not required; compatible direct media uses Qt Multimedia
 
 ---
 
@@ -222,7 +222,7 @@ cd RSS-Reader-Pro-v*-linux-x86_64
 git clone https://github.com/erfan138057/rss-reader-app.git
 cd rss-reader-app
 pip install -r requirements.txt
-python gui.py
+python qt_gui.py
 ```
 
 **پیش‌نیازها:** Python 3.8+ · VLC (اختیاری، برای پخش ویدیو)

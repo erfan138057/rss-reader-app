@@ -3,7 +3,7 @@
 ## 📦 Version 1.0.0 - Initial Release
 **Release Date:** January 2025  
 **Status:** Stable  
-**Download:** [rss-reader-v1.0.0.exe](https://github.com/yourusername/rss-reader/releases/tag/v1.0.0)
+**Download:** [rss-reader-v1.0.0.exe](https://github.com/erfan138057/rss-reader-app/releases/tag/v1.0.0)
 
 ### ✨ New Features
 - **DNS-over-HTTPS (DoH) Support**: Bypass censorship with built-in DNS scanner
@@ -21,7 +21,7 @@
 - **Persistent Settings**: Save preferences between sessions
 
 ### 🛠️ Technical Details
-- **Platform**: Windows (Tkinter-based)
+- **Platform**: Windows and Linux (PySide6/Qt-based)
 - **Dependencies**: httpx, feedparser, Pillow, python-vlc
 - **Database**: SQLite for feed storage
 - **Cache**: In-memory caching with expiration
@@ -104,14 +104,14 @@
 ### From Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/rss-reader.git
+git clone https://github.com/erfan138057/rss-reader-app.git
 cd rss-reader
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Run the application
-python gui.py
+python qt_gui.py
 ```
 
 ---
@@ -143,7 +143,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/rss-reader/issues)
+- **Issues**: [GitHub Issues](https://github.com/erfan138057/rss-reader-app/issues)
 - **Documentation**: [README.md](README.md)
 - **Email**: your-email@example.com
 

@@ -14,7 +14,6 @@ import subprocess
 from functools import partial
 from urllib.parse import urlparse
 
-import httpx
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject, QRunnable, QThreadPool, QDate, QUrl
 from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap, QAction, QShortcut
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
@@ -114,6 +113,7 @@ def button(text: str, object_name: str = "", checkable: bool = False) -> QPushBu
         w.setObjectName(object_name)
     w.setCheckable(checkable)
     w.setCursor(Qt.PointingHandCursor)
+    w.setFocusPolicy(Qt.StrongFocus)
     return w
 
 
@@ -164,10 +164,7 @@ class ImageJob(QRunnable):
             # image in the worker thread before showing the card fallback.
             image_url = self.url or (core.fetch_og_image(self.article_url) if self.article_url else "")
             if image_url:
-                response = httpx.get(image_url, timeout=10, follow_redirects=True,
-                                     headers={"User-Agent": "RSSReaderPro/1.0"})
-                if response.is_success:
-                    data = response.content
+                data = core.fetch_image_bytes(image_url, timeout=10)
         except Exception:
             pass
         # A card can be rebuilt or deleted while an image request is still in
@@ -549,6 +546,7 @@ class MainWindow(QMainWindow):
         self._closing = threading.Event()
         self._fetch_lock = threading.Lock()
         self._fetch_in_progress = False
+        self._last_fetch_errors = {}
         self.bridge = Bridge(self)
         self.bridge.refreshed.connect(self.on_refreshed)
         self.bridge.loaded.connect(self.on_loaded)
@@ -695,17 +693,20 @@ class MainWindow(QMainWindow):
             self.feed_layout.addWidget(label(category.upper(), 8, C["teal"], True))
             for feed in feeds:
                 count = counts.get(feed["url"], 0); title = feed.get("title") or urlparse(feed["url"]).netloc
-                name = ("●  " if feed.get("pinned") else "") + title + (f"   {count}" if count else "")
+                status_mark = "! " if feed.get("last_status") == "error" else ("✓ " if feed.get("last_status") == "ok" else "")
+                name = status_mark + ("●  " if feed.get("pinned") else "") + title + (f"   {count}" if count else "")
                 item = button(name, "feed", True); item.setChecked(self.active_feed == feed["url"]); item.clicked.connect(partial(self.select_feed, feed["url"]))
                 item.setContextMenuPolicy(Qt.CustomContextMenu); item.customContextMenuRequested.connect(partial(self.feed_menu, feed))
                 self.feed_layout.addWidget(item)
         self.feed_layout.addStretch(1)
 
     def feed_menu(self, feed: dict, point):
-        menu = QMenu(self); pin = menu.addAction("Unpin feed" if feed.get("pinned") else "Pin feed"); remove = menu.addAction("Remove feed")
+        menu = QMenu(self); pin = menu.addAction("Unpin feed" if feed.get("pinned") else "Pin feed"); retry = menu.addAction("Retry feed"); remove = menu.addAction("Remove feed")
         action = menu.exec(self.cursor().pos())
         if action == pin:
             self.store.pin_feed(feed["url"], not feed.get("pinned")); self.refresh_sidebar()
+        elif action == retry:
+            self.retry_feed(feed["url"])
         elif action == remove:
             self.remove_feed(feed["url"])
 
@@ -788,8 +789,17 @@ class MainWindow(QMainWindow):
         if not ok or not url.strip(): return
         title, _ = QInputDialog.getText(self, "Add feed", "Name (optional):")
         category, _ = QInputDialog.getText(self, "Feed category", "Category:", text="General")
-        self.store.add_feed(url.strip(), title.strip(), category.strip() or "General")
+        try:
+            normalized_url = self.store.validate_feed_url(url)
+            self.store.add_feed(normalized_url, title.strip(), category.strip() or "General")
+        except ValueError as exc:
+            QMessageBox.warning(self, "Add feed", str(exc))
+            return
         added = set(self.settings.get("added_feeds", [])); added.add(url.strip()); self.settings["added_feeds"] = sorted(added); config.save_settings(self.settings); self.refresh_all()
+
+    def retry_feed(self, url):
+        self.set_status("Retrying feed…")
+        self.fetch_feed_async(url, notify=False)
 
     def remove_feed(self, url):
         answer = QMessageBox.question(self, "Remove feed", "Remove this feed and its saved articles?", QMessageBox.Yes | QMessageBox.No)
@@ -830,7 +840,7 @@ class MainWindow(QMainWindow):
 
     def more_tools(self):
         menu = QMenu(self)
-        actions = [("Import OPML", self.import_opml), ("Export OPML", self.export_opml), ("Export bookmarks", self.export_bookmarks), ("DNS Scanner", self.open_dns), ("App log", self.open_log)]
+        actions = [("Import OPML", self.import_opml), ("Export OPML", self.export_opml), ("Export bookmarks", self.export_bookmarks), ("DNS Scanner", self.open_dns), ("Diagnostics", self.open_diagnostics), ("App log", self.open_log)]
         for name, fn in actions: menu.addAction(name, fn)
         menu.exec(self.cursor().pos())
 
@@ -873,6 +883,15 @@ class MainWindow(QMainWindow):
                     signals.failed.emit(str(exc))
             threading.Thread(target=worker, daemon=True).start()
         scan.clicked.connect(run); dlg.exec()
+
+    def open_diagnostics(self):
+        dlg = QDialog(self); dlg.setWindowTitle("RSS Reader Pro Diagnostics"); dlg.resize(760, 520)
+        layout = QVBoxLayout(dlg); out = QTextEdit(); out.setReadOnly(True); out.setFocusPolicy(Qt.StrongFocus)
+        feeds = self.store.get_feeds(); errors = [f for f in feeds if f.get("last_status") == "error"]
+        lines = ["RSS Reader Pro Diagnostics", "", f"Python: {sys.version.split()[0]}", f"Platform: {sys.platform}", f"Database: {config.DB_FILE}", f"Feeds: {len(feeds)}", f"Feed errors: {len(errors)}", f"Cache directory: {config.IMAGE_CACHE_DIR}", "", "Feed status:"]
+        lines += [f"- {f['title'] or f['url']}: {f.get('last_status', 'never')}" + (f" — {f.get('last_error')}" if f.get('last_error') else "") for f in feeds]
+        out.setPlainText("\n".join(lines)); layout.addWidget(out, 1)
+        close = button("Close", "darkButton"); close.setFocusPolicy(Qt.StrongFocus); close.clicked.connect(dlg.accept); layout.addWidget(close, alignment=Qt.AlignRight); dlg.exec()
 
     def open_log(self):
         dlg = QDialog(self); dlg.setWindowTitle("App log"); dlg.resize(760, 480); layout = QVBoxLayout(dlg); out = QTextEdit(); out.setReadOnly(True); out.setPlainText("\n".join(core.LOG.get_lines())); layout.addWidget(out); dlg.exec()
@@ -984,10 +1003,17 @@ class MainWindow(QMainWindow):
     def fetch_feed_data(self, url, title, notify):
         if self._closing.is_set():
             return []
+        self.store.update_feed_status(url, "loading", "")
         items = core.fetch_feed(url)
         if self._closing.is_set():
             return []
+        if not items:
+            self.store.update_feed_status(url, "error", "No entries returned or the feed could not be fetched.")
+            self._last_fetch_errors[url] = "No entries returned or the feed could not be fetched."
+            return []
         fresh = [item for item in items if self.store.upsert(item, url)]
+        self.store.update_feed_status(url, "ok", "")
+        self._last_fetch_errors.pop(url, None)
         if notify and not self._closing.is_set() and self.settings.get("notifications", True) and fresh:
             core.notify_new_items(title, fresh)
         return fresh

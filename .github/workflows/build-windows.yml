@@ -22,10 +22,15 @@ jobs:
         python -m unittest -q test_core.py
         $env:QT_QPA_PLATFORM = "offscreen"
         python -m unittest -q test_qt_gui.py
+    - name: Validate package metadata
+      run: python -c "import version; assert set(['Windows', 'Linux']).issubset(version.SUPPORTED_PLATFORMS)"
     - name: Build with PyInstaller
       run: |
         # PyInstaller را با استفاده از ماژول پایتون اجرا می‌کنیم تا مسیر آن به درستی پیدا شود.
         python -m PyInstaller --noconfirm --clean --onefile --windowed --name rss_reader --icon assets/rss-reader-pro.ico --add-data "assets;assets" qt_gui.py
+    - name: Smoke-test executable exists
+      shell: pwsh
+      run: if (-not (Test-Path dist/rss_reader.exe)) { throw "Windows executable was not created" }
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:

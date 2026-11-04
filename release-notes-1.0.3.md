@@ -48,7 +48,7 @@ The release passed Python compilation checks, nine core automated tests and thre
 ```bash
 git pull
 pip install -r requirements.txt
-python gui.py
+python qt_gui.py
 ```
 
 Windows executable users can download the EXE from the release. Linux users can download `RSS-Reader-Pro-v1.0.3-linux-x86_64.tar.gz`, extract it and execute `RSS-Reader-Pro`.

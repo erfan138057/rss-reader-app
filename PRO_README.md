@@ -21,7 +21,7 @@ A comprehensive Python desktop application for managing RSS feeds with advanced 
 
 ### Prerequisites
 - Python 3.8+
-- VLC Media Player (for video playback)
+- No VLC required; Qt handles compatible direct media and the system player handles other providers
 
 ### Installation
 \`\`\`bash
@@ -33,7 +33,7 @@ cd rss-reader-app
 pip install -r requirements.txt
 
 # Run the application
-python gui.py
+python qt_gui.py
 \`\`\`
 
 ### Windows EXE (Coming Soon)
