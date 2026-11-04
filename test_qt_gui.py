@@ -71,7 +71,7 @@ class QtInteractionTests(unittest.TestCase):
             dialog.close()
         self.window.close()
         self.process_events()
-        self.window.store.conn.close()
+        self.window.store.close()
         config.DB_FILE = self.original_db
         config.SETTINGS_FILE = self.original_settings
         config.DEFAULT_FEEDS = self.original_default_feeds
@@ -122,6 +122,24 @@ class QtInteractionTests(unittest.TestCase):
         self.process_events()
         threading.excepthook = original_hook
         self.assertFalse(failures, "A late worker callback must not access a deleted Qt signal source.")
+
+
+    def test_duplicate_refresh_is_ignored_while_fetch_is_running(self):
+        started = threading.Event()
+        release = threading.Event()
+        original = self.window.fetch_feed_data
+        def slow_fetch(*args):
+            started.set()
+            release.wait(timeout=2)
+            return []
+        self.window.fetch_feed_data = slow_fetch
+        self.window.fetch_all_async()
+        self.assertTrue(started.wait(timeout=1))
+        self.window.fetch_all_async()
+        self.assertEqual(self.window._fetch_in_progress, True)
+        release.set()
+        time.sleep(0.1)
+        self.window.fetch_feed_data = original
 
     def test_direct_video_opens_native_in_app_player(self):
         item = {

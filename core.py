@@ -303,6 +303,13 @@ class Store:
             pass
         LOG.info(f"DB opened: {db_file}")
 
+    def close(self):
+        """Close the SQLite connection safely and idempotently."""
+        with self._lock:
+            if self.conn is not None:
+                self.conn.close()
+                self.conn = None
+
     @staticmethod
     def _item_key(feed_url: str, source_id: str) -> str:
         """Make a feed-scoped database key from an RSS source identifier.
@@ -316,7 +323,10 @@ class Store:
 
     def upsert(self, item: dict, feed_url: str) -> bool:
         """Insert or refresh an item and return whether it is newly discovered."""
-        source_id = str(item["id"])
+        source_id = str(item.get("id") or item.get("link") or item.get("title") or "").strip()
+        if not source_id:
+            fallback = "|".join(str(item.get(field) or "") for field in ("title", "published", "summary"))
+            source_id = hashlib.sha256(fallback.encode("utf-8")).hexdigest()
         item_id = self._item_key(feed_url, source_id)
         with self._lock:
             # Upgrade legacy unscoped records as soon as their own feed is
@@ -330,10 +340,13 @@ class Store:
                     (id,feed,title,link,published,summary,image_url,video_url,video_type,seen,click_count,bookmarked)
                 VALUES (:id,:feed,:title,:link,:published,:summary,:image_url,:video_url,:video_type,0,0,0)
                 ON CONFLICT(id) DO UPDATE SET
-                    title=excluded.title, summary=excluded.summary,
-                    image_url=COALESCE(excluded.image_url, items.image_url),
-                    video_url=COALESCE(excluded.video_url, items.video_url),
-                    video_type=COALESCE(excluded.video_type, items.video_type)
+                    title=CASE WHEN excluded.title<>'' THEN excluded.title ELSE items.title END,
+                    link=CASE WHEN excluded.link<>'' THEN excluded.link ELSE items.link END,
+                    published=CASE WHEN excluded.published<>'' THEN excluded.published ELSE items.published END,
+                    summary=CASE WHEN excluded.summary<>'' THEN excluded.summary ELSE items.summary END,
+                    image_url=CASE WHEN excluded.image_url<>'' THEN excluded.image_url ELSE items.image_url END,
+                    video_url=CASE WHEN excluded.video_url<>'' THEN excluded.video_url ELSE items.video_url END,
+                    video_type=CASE WHEN excluded.video_type<>'' THEN excluded.video_type ELSE items.video_type END
             """, {**item, "id": item_id, "feed": feed_url})
             self.conn.commit()
         return is_new
@@ -743,8 +756,13 @@ def fetch_feed(feed_url, timeout=20) -> list:
         items = []
         for e in feed.entries:
             video_url, video_type = detect_video(e)
+            entry_id = (e.get("id") or e.get("guid") or e.get("link") or "").strip()
+            if not entry_id:
+                entry_id = hashlib.sha256(
+                    f"{e.get('title', '')}|{e.get('published', e.get('updated', ''))}".encode("utf-8")
+                ).hexdigest()
             items.append({
-                "id":         e.get("id") or e.get("link") or e.get("title",""),
+                "id":         entry_id,
                 "title":      html.unescape(e.get("title","(no title)")),
                 "link":       e.get("link",""),
                 "summary":    html.unescape(re.sub(r"<[^>]+>","", e.get("summary","")))[:800],

@@ -547,6 +547,8 @@ class MainWindow(QMainWindow):
         QApplication.instance().setLayoutDirection(Qt.RightToLeft if self.settings.get("language") == "fa" else Qt.LeftToRight)
         self.store = core.Store(config.DB_FILE)
         self._closing = threading.Event()
+        self._fetch_lock = threading.Lock()
+        self._fetch_in_progress = False
         self.bridge = Bridge(self)
         self.bridge.refreshed.connect(self.on_refreshed)
         self.bridge.loaded.connect(self.on_loaded)
@@ -923,30 +925,60 @@ class MainWindow(QMainWindow):
             core.LOG.debug(f"Skipped late network signal during shutdown: {exc}")
 
     def fetch_initial_async(self):
+        with self._fetch_lock:
+            if self._fetch_in_progress or self._closing.is_set():
+                return
+            self._fetch_in_progress = True
+
         def worker():
-            for feed in self.store.get_feeds():
-                if self._closing.is_set():
-                    return
-                self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], False)
-            self.emit_loaded_if_active()
+            try:
+                for feed in self.store.get_feeds():
+                    if self._closing.is_set():
+                        return
+                    self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], False)
+                self.emit_loaded_if_active()
+            finally:
+                with self._fetch_lock:
+                    self._fetch_in_progress = False
         threading.Thread(target=worker, daemon=True).start()
 
     def fetch_all_async(self):
+        # Prevent the initial load, manual refresh and timer refresh from
+        # running against the same SQLite connection at the same time.
+        with self._fetch_lock:
+            if self._fetch_in_progress or self._closing.is_set():
+                self.set_status("● Refresh already in progress")
+                return
+            self._fetch_in_progress = True
+
         def worker():
-            for feed in self.store.get_feeds():
-                if self._closing.is_set():
-                    return
-                self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], True)
-            self.emit_loaded_if_active()
+            try:
+                for feed in self.store.get_feeds():
+                    if self._closing.is_set():
+                        return
+                    self.fetch_feed_data(feed["url"], feed.get("title") or feed["url"], True)
+                self.emit_loaded_if_active()
+            finally:
+                with self._fetch_lock:
+                    self._fetch_in_progress = False
         threading.Thread(target=worker, daemon=True).start()
 
     def fetch_feed_async(self, url, notify: bool = False):
         feed = next((f for f in self.store.get_feeds() if f["url"] == url), {})
-        def worker():
-            if self._closing.is_set():
+        with self._fetch_lock:
+            if self._fetch_in_progress or self._closing.is_set():
                 return
-            self.fetch_feed_data(url, feed.get("title") or url, notify)
-            self.emit_loaded_if_active()
+            self._fetch_in_progress = True
+
+        def worker():
+            try:
+                if self._closing.is_set():
+                    return
+                self.fetch_feed_data(url, feed.get("title") or url, notify)
+                self.emit_loaded_if_active()
+            finally:
+                with self._fetch_lock:
+                    self._fetch_in_progress = False
         threading.Thread(target=worker, daemon=True).start()
 
     def fetch_feed_data(self, url, title, notify):

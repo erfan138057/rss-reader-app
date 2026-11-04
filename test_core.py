@@ -83,7 +83,7 @@ class StoreTests(unittest.TestCase):
         self.store = core.Store(self.db_path)
 
     def tearDown(self):
-        self.store.conn.close()
+        self.store.close()
         self.temp_dir.cleanup()
 
     def test_categories_unread_and_mark_all_read(self):
@@ -124,6 +124,32 @@ class StoreTests(unittest.TestCase):
                                           start_date="2026-08-01", end_date="2026-08-31")
         self.assertEqual([item["title"] for item in results], ["Python release"])
         self.assertEqual(self.store.get_items(feed, "popularity")[0]["title"], "Sports update")
+
+
+    def test_empty_source_id_gets_stable_scoped_key(self):
+        feed = "https://news.example/rss"
+        self.store.add_feed(feed, "News", "اخبار")
+        item = make_item("", "No GUID article")
+        item["link"] = ""
+        self.assertTrue(self.store.upsert(item, feed))
+        self.assertFalse(self.store.upsert(item, feed))
+        saved = self.store.get_items(feed)
+        self.assertEqual(len(saved), 1)
+        self.assertTrue(saved[0]["id"])
+
+    def test_refresh_does_not_erase_existing_media_or_metadata(self):
+        feed = "https://news.example/rss"
+        self.store.add_feed(feed, "News", "اخبار")
+        original = make_item("article-1", "Original", "2026-08-18T12:00:00")
+        original.update({"image_url": "https://example.test/image.jpg", "video_url": "https://example.test/video.mp4", "video_type": "direct"})
+        self.store.upsert(original, feed)
+        refreshed = make_item("article-1", "Updated", "")
+        self.store.upsert(refreshed, feed)
+        saved = self.store.get_items(feed)[0]
+        self.assertEqual(saved["title"], "Updated")
+        self.assertEqual(saved["image_url"], original["image_url"])
+        self.assertEqual(saved["video_url"], original["video_url"])
+        self.assertEqual(saved["published"], original["published"])
 
     def test_opml_and_bookmark_html_export(self):
         self.store.add_feed("https://news.example/rss", "News", "اخبار")
