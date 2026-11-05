@@ -117,7 +117,6 @@ If RSS Reader Pro saved you time or helped you access free information, consider
 
 [![Support on Daramet](https://img.shields.io/badge/💛_Support_on_Daramet-F5A623?style=for-the-badge)](https://daramet.com/erfan138057)
 
-**USDT (BEP20):** `0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
 
 **TON / Tonkeeper:** `UQDxij8m9bvUyGqEwEUfY5afFi16rqdQo7fnsuKO0trJjBrS`
 
@@ -237,7 +236,6 @@ python qt_gui.py
 
 [![حمایت در دارامت](https://img.shields.io/badge/💛_حمایت_در_دارامت-F5A623?style=for-the-badge)](https://daramet.com/erfan138057)
 
-**USDT (BEP20):** `0x9ee9a9ef2b9679fa99b3b36313bc581a66b05cfb`
 
 **TON / Tonkeeper:** `UQDxij8m9bvUyGqEwEUfY5afFi16rqdQo7fnsuKO0trJjBrS`
 
