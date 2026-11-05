@@ -11,7 +11,8 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        # Keep the build reproducible and compatible with the pinned PySide6 line.
+        python-version: '3.12'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
