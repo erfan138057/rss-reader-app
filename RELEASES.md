@@ -1,8 +1,26 @@
 # RSS Reader - Release Notes
 
+## 📦 Version 1.1.0 - User Experience Update
+**Release Date:** November 5, 2026
+**Status:** Stable
+**Download:** [RSS Reader Pro v1.1.0](https://github.com/erfan138057/rss-reader-app/releases/tag/v1.1.0)
+
+### ✨ User Experience Improvements
+- Feed health indicators with last status and clear error details
+- One-click retry for failed feeds
+- Diagnostics panel for platform, database, cache and feed health
+- Automatic rolling SQLite backups and versioned schema migration
+- Bounded image cache with automatic cleanup
+- Safer refresh coordination, feed URL validation and stronger keyboard focus
+- Official Windows and Linux portable builds
+
+This release remains local-first: no mandatory account, cloud synchronization, advertising or telemetry.
+
+---
+
 ## 📦 Version 1.0.0 - Initial Release
-**Release Date:** January 2025  
-**Status:** Stable  
+**Release Date:** January 2025
+**Status:** Stable
 **Download:** [rss-reader-v1.0.0.exe](https://github.com/erfan138057/rss-reader-app/releases/tag/v1.0.0)
 
 ### ✨ New Features
@@ -35,8 +53,8 @@
 ---
 
 ## 📦 Version 0.9.0 - Beta Release
-**Release Date:** December 2024  
-**Status:** Beta  
+**Release Date:** December 2024
+**Status:** Beta
 
 ### 🔧 Initial Implementation
 - Basic RSS feed parsing and display
@@ -57,12 +75,10 @@
 
 ## 🚀 Future Roadmap
 
-### Version 1.1.0 (Q1 2025)
-- [ ] Advanced caching with Redis support
-- [ ] More video platform integrations
-- [ ] Export/import feed lists
-- [ ] Keyboard shortcuts
+### Version 1.2.0 (planned)
+- [ ] Saved smart views and advanced feed rules
 - [ ] System tray integration
+- [ ] More export and customization options
 
 ### Version 1.2.0 (Q2 2025)
 - [ ] Mobile companion app
@@ -88,7 +104,7 @@
 
 ### Recommended
 - **OS**: Windows 11
-- **RAM**: 4GB+  
+- **RAM**: 4GB+
 - **Storage**: 100MB free space
 - **VLC**: Installed for best video experience
 

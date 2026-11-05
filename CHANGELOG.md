@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-05
+
+### Added
+- Feed health indicators with last status, error details and a one-click retry action.
+- Diagnostics panel showing runtime, platform, database, cache and feed health information.
+- Bounded on-disk image cache with automatic cleanup to protect disk space.
+- Automatic rolling SQLite backups before opening and migrating the database.
+- Versioned SQLite schema marker and safer feed URL validation.
+- Stronger keyboard focus behavior and clearer tooltips throughout the Qt interface.
+
+### Changed
+- Hardened refresh coordination so initial load, manual refresh, timer refresh and feed retry cannot overlap.
+- Preserved existing article metadata when a later feed refresh returns incomplete data.
+- Added stable identifiers for RSS entries without GUIDs or links.
+- Officially documented Windows and Linux support and stabilized the Windows CI build on Python 3.12.
+- Updated release documentation and removed outdated Tkinter/VLC build instructions.
+
+### Fixed
+- Prevented duplicate articles caused by missing source identifiers.
+- Prevented refresh/shutdown races around the shared SQLite connection.
+- Prevented invalid URLs from being stored as feeds.
+
 ## [1.0.3] - 2026-08-18
 
 ### Added

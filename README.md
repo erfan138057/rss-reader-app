@@ -1,7 +1,7 @@
 <meta name="google-site-verification" content="jUdMhILMMS6nFdTtg00tQIXkAzidBCkM-dcPaSA-ZRo" />
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.3-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/python-3.8+-green?style=for-the-badge" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-orange?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/stars/erfan138057/rss-reader-app?style=for-the-badge" alt="Stars">
@@ -16,7 +16,7 @@
 
 **Professional RSS Desktop App with DNS-over-HTTPS censorship bypass**
 
-> **v1.0.3 is here:** a faster reading workflow with advanced search, categories, Reader Mode, OPML transfer, bookmark exports, notifications and auto-scroll.
+> **v1.1.0 is here:** a clearer, safer and more dependable reading workflow with feed health, retry, diagnostics, automatic backups and a bounded image cache.
 
 <p align="center">
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">
@@ -156,7 +156,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 **اپلیکیشن دسکتاپ مدیریت فید RSS با دور زدن فیلترینگ**
 
-> **نسخهٔ ۱.۰.۳ منتشر شد:** تجربهٔ خواندن سریع‌تر با جست‌وجوی پیشرفته، دسته‌بندی، حالت مطالعه، انتقال OPML، خروجی نشان‌گذاری‌ها، اعلان و پیمایش خودکار.
+> **نسخهٔ ۱.۱.۰ منتشر شد:** تجربهٔ خواندن شفاف‌تر و قابل‌اعتمادتر با وضعیت سلامت فید، تلاش مجدد، عیب‌یابی، پشتیبان‌گیری خودکار و کش محدود تصاویر.
 
 <p align="center">
   <a href="https://github.com/erfan138057/rss-reader-app/releases/latest">

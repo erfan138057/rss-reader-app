@@ -614,7 +614,7 @@ def fetch_reader_content(page_url: str, timeout=15) -> dict:
         raise RuntimeError("beautifulsoup4 is required for Reader Mode")
     try:
         response = httpx.get(page_url, timeout=timeout,
-                             headers={"User-Agent": "Mozilla/5.0 (compatible; RSSReaderPro/1.0.3)"},
+                             headers={"User-Agent": "Mozilla/5.0 (compatible; RSSReaderPro/1.1.0)"},
                              follow_redirects=True)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")

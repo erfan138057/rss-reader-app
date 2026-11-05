@@ -1,9 +1,9 @@
 # Version Information
 
-__version__ = "1.0.3"
-__release_date__ = "2026-08-18"
+__version__ = "1.1.0"
+__release_date__ = "2026-11-05"
 __status__ = "Stable"
-__build__ = "20260818"
+__build__ = "20261105"
 
 # Supported Platforms
 SUPPORTED_PLATFORMS = ["Windows", "Linux"]
