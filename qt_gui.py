@@ -693,9 +693,16 @@ class MainWindow(QMainWindow):
             self.feed_layout.addWidget(label(category.upper(), 8, C["teal"], True))
             for feed in feeds:
                 count = counts.get(feed["url"], 0); title = feed.get("title") or urlparse(feed["url"]).netloc
-                status_mark = "! " if feed.get("last_status") == "error" else ("✓ " if feed.get("last_status") == "ok" else "")
+                status = feed.get("last_status") or "never"
+                status_mark = {"error": "! ", "updated": "✓ ", "no_new_items": "○ ", "ok": "✓ "}.get(status, "")
                 name = status_mark + ("●  " if feed.get("pinned") else "") + title + (f"   {count}" if count else "")
                 item = button(name, "feed", True); item.setChecked(self.active_feed == feed["url"]); item.clicked.connect(partial(self.select_feed, feed["url"]))
+                status_text = {"updated": "Updated successfully", "ok": "Checked successfully", "no_new_items": "Checked successfully — no new items", "error": "Refresh failed — retry available", "loading": "Refreshing…", "never": "Not checked yet"}.get(status, status)
+                if feed.get("last_fetched"):
+                    status_text += f"\nLast checked: {feed['last_fetched']}"
+                if feed.get("last_error"):
+                    status_text += f"\n{feed['last_error']}"
+                item.setToolTip(status_text)
                 item.setContextMenuPolicy(Qt.CustomContextMenu); item.customContextMenuRequested.connect(partial(self.feed_menu, feed))
                 self.feed_layout.addWidget(item)
         self.feed_layout.addStretch(1)
@@ -888,8 +895,10 @@ class MainWindow(QMainWindow):
         dlg = QDialog(self); dlg.setWindowTitle("RSS Reader Pro Diagnostics"); dlg.resize(760, 520)
         layout = QVBoxLayout(dlg); out = QTextEdit(); out.setReadOnly(True); out.setFocusPolicy(Qt.StrongFocus)
         feeds = self.store.get_feeds(); errors = [f for f in feeds if f.get("last_status") == "error"]
-        lines = ["RSS Reader Pro Diagnostics", "", f"Python: {sys.version.split()[0]}", f"Platform: {sys.platform}", f"Database: {config.DB_FILE}", f"Feeds: {len(feeds)}", f"Feed errors: {len(errors)}", f"Cache directory: {config.IMAGE_CACHE_DIR}", "", "Feed status:"]
-        lines += [f"- {f['title'] or f['url']}: {f.get('last_status', 'never')}" + (f" — {f.get('last_error')}" if f.get('last_error') else "") for f in feeds]
+        no_new = [f for f in feeds if f.get("last_status") == "no_new_items"]
+        lines = ["RSS Reader Pro Diagnostics", "", f"Python: {sys.version.split()[0]}", f"Platform: {sys.platform}", f"Database: {config.DB_FILE}", f"Feeds: {len(feeds)}", f"Feed errors: {len(errors)}", f"Feeds checked with no new items: {len(no_new)}", f"Cache directory: {config.IMAGE_CACHE_DIR}", "", "Feed status:"]
+        status_names = {"updated": "updated — new items found", "ok": "checked successfully", "no_new_items": "checked successfully — no new items", "error": "refresh failed", "loading": "refreshing", "never": "not checked yet"}
+        lines += [f"- {f['title'] or f['url']}: {status_names.get(f.get('last_status', 'never'), f.get('last_status', 'never'))}" + (f" — {f.get('last_error')}" if f.get('last_error') else "") for f in feeds]
         out.setPlainText("\n".join(lines)); layout.addWidget(out, 1)
         close = button("Close", "darkButton"); close.setFocusPolicy(Qt.StrongFocus); close.clicked.connect(dlg.accept); layout.addWidget(close, alignment=Qt.AlignRight); dlg.exec()
 
@@ -1004,15 +1013,18 @@ class MainWindow(QMainWindow):
         if self._closing.is_set():
             return []
         self.store.update_feed_status(url, "loading", "")
-        items = core.fetch_feed(url)
+        result = core.fetch_feed_result(url)
         if self._closing.is_set():
             return []
-        if not items:
-            self.store.update_feed_status(url, "error", "No entries returned or the feed could not be fetched.")
-            self._last_fetch_errors[url] = "No entries returned or the feed could not be fetched."
+        items = result.get("items", [])
+        if result.get("status") == "error":
+            error = result.get("error") or "The feed could not be fetched."
+            self.store.update_feed_status(url, "error", error)
+            self._last_fetch_errors[url] = error
             return []
         fresh = [item for item in items if self.store.upsert(item, url)]
-        self.store.update_feed_status(url, "ok", "")
+        status = "updated" if fresh else "no_new_items"
+        self.store.update_feed_status(url, status, "")
         self._last_fetch_errors.pop(url, None)
         if notify and not self._closing.is_set() and self.settings.get("notifications", True) and fresh:
             core.notify_new_items(title, fresh)

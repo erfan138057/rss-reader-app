@@ -800,15 +800,18 @@ _CACHE_TIMEOUT = 300  # 5 minutes
 # ---------------------------------------------------------------------------
 # Feed fetch with caching
 # ---------------------------------------------------------------------------
-def fetch_feed(feed_url, timeout=20) -> list:
-    """Fetch RSS feed with caching support."""
+def fetch_feed_result(feed_url, timeout=20) -> dict:
+    """Fetch a feed and distinguish an empty result from a failed refresh."""
     # Check cache first
     cache_key = f"{feed_url}_{timeout}"
     if cache_key in _feed_cache:
         cached_data, timestamp = _feed_cache[cache_key]
         if time.time() - timestamp < _CACHE_TIMEOUT:
             LOG.debug(f"Cache hit for {feed_url}")
-            return cached_data
+            if isinstance(cached_data, dict):
+                return cached_data
+            # Cache entries created by older builds contained only the list.
+            return {"items": cached_data, "status": "ok", "error": ""}
     
     LOG.info(f"Fetching: {feed_url}")
     try:
@@ -817,9 +820,13 @@ def fetch_feed(feed_url, timeout=20) -> list:
                        follow_redirects=True)
         if r.status_code != 200:
             LOG.warning(f"Feed {feed_url} → {r.status_code}")
-            return []
+            return {"items": [], "status": "error", "error": f"HTTP {r.status_code}"}
         
         feed = feedparser.parse(r.content)
+        if getattr(feed, "bozo", False) and not feed.entries:
+            error = str(getattr(feed, "bozo_exception", "Invalid feed"))[:500]
+            LOG.warning(f"Invalid feed {feed_url}: {error}")
+            return {"items": [], "status": "error", "error": error}
         items = []
         for e in feed.entries:
             video_url, video_type = detect_video(e)
@@ -840,13 +847,19 @@ def fetch_feed(feed_url, timeout=20) -> list:
             })
         
         # Cache the results
-        _feed_cache[cache_key] = (items, time.time())
+        result = {"items": items, "status": "ok" if items else "no_new_items", "error": ""}
+        _feed_cache[cache_key] = (result, time.time())
         
         LOG.info(f"  → {len(items)} articles from {feed_url}")
-        return items
+        return result
     except Exception as exc:
         LOG.error(f"Fetch error {feed_url}: {exc}")
-        return []
+        return {"items": [], "status": "error", "error": str(exc)[:500]}
+
+
+def fetch_feed(feed_url, timeout=20) -> list:
+    """Fetch RSS feed with caching support (legacy list-returning API)."""
+    return fetch_feed_result(feed_url, timeout).get("items", [])
 
 def clear_cache():
     """Clear the feed cache."""

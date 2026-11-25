@@ -57,6 +57,22 @@ class CoreHelpersTests(unittest.TestCase):
         core.clear_cache()
         self.assertFalse(core._feed_cache)
 
+    def test_feed_result_distinguishes_empty_feed_from_http_error(self):
+        empty_feed = b"<?xml version='1.0'?><rss version='2.0'><channel><title>Empty</title></channel></rss>"
+        response = mock.Mock(status_code=200, content=empty_feed)
+        with mock.patch("core.httpx.get", return_value=response):
+            core.clear_cache()
+            result = core.fetch_feed_result("https://empty.example/rss")
+        self.assertEqual(result["status"], "no_new_items")
+        self.assertEqual(result["items"], [])
+
+        error_response = mock.Mock(status_code=503, content=b"")
+        with mock.patch("core.httpx.get", return_value=error_response):
+            core.clear_cache()
+            result = core.fetch_feed_result("https://down.example/rss")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["error"], "HTTP 503")
+
     def test_ip_detection(self):
         self.assertTrue(core._is_ip("192.168.1.1"))
         self.assertFalse(core._is_ip("example.com"))
